@@ -31,6 +31,7 @@
 
 #define A20_REG_PI_CFG0_OFF 0x120
 #define A20_REG_PI_CFG1_OFF 0x124
+#define A20_REG_PI_CFG2_OFF 0x128
 #define A20_REG_PI_DAT_OFF 0x130
 
 #define A20_REG_PIO_INT_DEB_OFF 0x218
@@ -68,6 +69,30 @@ struct pin {
 };
 
 const struct pin pins[] = {
+	[0] = { /* port PI19 */
+		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
+		.upp_bit = 14,
+		.low_bit = 12,
+
+		.dat_reg_off = A20_REG_PI_DAT_OFF,
+		.dat_bit = 19,
+	},
+	[1] = { /* port PI18 */
+		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
+		.upp_bit = 10,
+		.low_bit = 8,
+
+		.dat_reg_off = A20_REG_PI_DAT_OFF,
+		.dat_bit = 18,
+	},
+	[2] = { /* port PH7 */
+		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
+		.upp_bit = 30,
+		.low_bit = 28,
+
+		.dat_reg_off = A20_REG_PH_DAT_OFF,
+		.dat_bit = 7,
+	},
 	[3] = { /* port PH6 */
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
 		.upp_bit = 26,
