@@ -53,7 +53,6 @@ struct pin {
 	uint32_t cfg_reg_off;
 	uint8_t upp_bit;
 	uint8_t low_bit;
-	uint8_t index;
 
 	/* data informations */
 	uint32_t dat_reg_off;
@@ -65,7 +64,6 @@ const struct pin pins[] = {
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.upp_bit = 14,
 		.low_bit = 12,
-		.index = 11,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 11,
