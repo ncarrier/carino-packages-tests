@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <error.h>
 
@@ -56,25 +57,34 @@ const struct gpio gpio13 = {
 	.index = 11,
 };
 
+static bool register_bit_range_value_base_prm_valid(void *reg_addr,
+		uint8_t low_bit, uint8_t upp_bit)
+{
+	/* check reg_addr is in range */
+	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+		return false;
+	/* check bounds are strictly ordered and less than 32 */
+	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
+		return false;
+
+	return true;
+}
+
 static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 		uint8_t upp_bit, uint32_t *value)
 {
 	uint8_t bit_span;
 	uint32_t bit_mask;
 
-	/* check reg_addr is in range */
-	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+	if (value == NULL)
 		return -EINVAL;
-	/* check bounds are strictly ordered and less than 32 */
-	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
+	if (!register_bit_range_value_base_prm_valid(reg_addr, low_bit, upp_bit))
 		return -EINVAL;
+
 	bit_span = upp_bit - low_bit + 1;
 	bit_mask = (1 << bit_span) - 1;
 
-	if (value == NULL)
-		return -EINVAL;
-
-	/* shift value and mask to their right bit offset */
+	/* shift mask to it's right bit offset */
 	bit_mask <<= low_bit;
 
 	/* read, compute and update */
@@ -94,12 +104,9 @@ static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 	uint8_t bit_span;
 	uint32_t bit_mask;
 
-	/* check reg_addr is in range */
-	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+	if (!register_bit_range_value_base_prm_valid(reg_addr, low_bit, upp_bit))
 		return -EINVAL;
-	/* check bounds are strictly ordered and less than 32 */
-	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
-		return -EINVAL;
+
 	bit_span = upp_bit - low_bit + 1;
 	bit_mask = (1 << bit_span) - 1;
 	/* check value doesn't have more bits than fit in the bit span */
