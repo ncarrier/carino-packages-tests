@@ -56,13 +56,35 @@ const struct gpio gpio13 = {
 	.index = 11,
 };
 
-/* TODO implement
 static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 		uint8_t upp_bit, uint32_t *value)
 {
+	uint8_t bit_span;
+	uint32_t bit_mask;
 
+	/* check reg_addr is in range */
+	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+		return -EINVAL;
+	/* check bounds are strictly ordered and less than 32 */
+	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
+		return -EINVAL;
+	bit_span = upp_bit - low_bit + 1;
+	bit_mask = (1 << bit_span) - 1;
+
+	if (value == NULL)
+		return -EINVAL;
+
+	/* shift value and mask to their right bit offset */
+	bit_mask <<= low_bit;
+
+	/* read, compute and update */
+	*value = *(volatile uint32_t*)reg_addr;
+	/* shut off the bits in range */
+	*value &= bit_mask;
+	*value >>= low_bit;
+
+	return 0;
 }
-*/
 
 /* low_bit and upp_bit are inclusives */
 static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
@@ -98,19 +120,29 @@ static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 	reg_value |= value;
 	*(volatile uint32_t*)reg_addr = reg_value;
 
-	printf("reg_value = 0x%x\n", reg_value);
-
 	return 0;
 }
 
 static int gpio_pinMode(const struct gpio *g, uint32_t mode)
 {
 	void *reg_addr;
+	int ret;
+	uint32_t value;
 
 	if (g == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
 
 	reg_addr = ((char *)pio_start + g->cfg_reg_off);
+
+	ret = get_register_bit_range_value(reg_addr, g->low_bit, g->upp_bit,
+		&value);
+	if (ret < 0) {
+		fprintf(stderr, "failed to read value of register 0x%x\n",
+				g->cfg_reg_off);
+	}
+
+	if (value == mode)
+		return 0;
 
 	return set_register_bit_range_value(reg_addr, g->low_bit, g->upp_bit,
 			mode);
