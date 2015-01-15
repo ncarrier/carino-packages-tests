@@ -296,6 +296,34 @@ static int pin_digitalWrite(const struct pin *pin, uint8_t value)
 			pin->dat_bit, value);
 }
 
+static int pin_digitalRead(const struct pin *pin, uint32_t *value)
+{
+	void *reg_addr;
+
+	if (pin == NULL || value == NULL)
+		return -EINVAL;
+
+	reg_addr = ((char *)pio_start + pin->dat_reg_off);
+
+	return get_register_bit_range_value(reg_addr, pin->dat_bit,
+			pin->dat_bit, value);
+}
+
+static int digitalRead(uint8_t pin)
+{
+	int ret;
+	uint32_t value;
+
+	if (pin > A5)
+		return 0;
+
+	ret = pin_digitalRead(pins + pin, &value);
+	if (ret < 0)
+		return 0;
+
+	return value;
+}
+
 static void __attribute__ ((destructor)) clean(void)
 {
 	munmap(map_base, mapping_size);
@@ -368,17 +396,24 @@ int main(int argc, char *argv[])
 	pinMode(pin, A20_GPIO_OUT);
 
 	/* let it blink, let it blink, let it blink, oh let it blink ! */
+	printf("value: %d\n", digitalRead(pin));
 	digitalWrite(pin, HIGH);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 	digitalWrite(pin, LOW);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 	digitalWrite(pin, HIGH);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 	digitalWrite(pin, LOW);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 	digitalWrite(pin, HIGH);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 	digitalWrite(pin, LOW);
+	printf("value: %d\n", digitalRead(pin));
 	sleep(1);
 
 	return EXIT_SUCCESS;
