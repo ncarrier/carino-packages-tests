@@ -98,7 +98,7 @@ static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 		uint8_t upp_bit, uint32_t value)
 {
-	volatile uint32_t reg_value;
+	uint32_t reg_value;
 	uint8_t bit_span;
 	uint32_t bit_mask;
 
