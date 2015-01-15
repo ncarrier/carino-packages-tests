@@ -56,10 +56,18 @@ struct pin {
 
 	/* data informations */
 	uint32_t dat_reg_off;
-	uint8_t dat_bit;
+	uint8_t dat_bit; /* must be equal to x in PIx */
 };
 
 const struct pin pins[] = {
+	[11] = { /* port PI12 */
+		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
+		.upp_bit = 18,
+		.low_bit = 16,
+
+		.dat_reg_off = A20_REG_PI_DAT_OFF,
+		.dat_bit = 12,
+	},
 	[12] = { /* port PI13 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.upp_bit = 22,
