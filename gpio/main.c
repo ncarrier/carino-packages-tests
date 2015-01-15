@@ -22,6 +22,8 @@
 /* base + last register offset + last register size */
 #define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_REG_PIO_LAST_OFF + A20_PIO_REG_SIZE)
 
+#define A20_REG_PH_CFG0_OFF 0xFC
+#define A20_REG_PH_DAT_OFF 0x10C
 #define A20_REG_PI_CFG1_OFF 0x124
 #define A20_REG_PI_DAT_OFF 0x130
 
@@ -60,6 +62,14 @@ struct pin {
 };
 
 const struct pin pins[] = {
+	[9] = { /* port PH5 */
+		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
+		.upp_bit = 22,
+		.low_bit = 20,
+
+		.dat_reg_off = A20_REG_PH_DAT_OFF,
+		.dat_bit = 5,
+	},
 	[10] = { /* port PI10 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.upp_bit = 10,
