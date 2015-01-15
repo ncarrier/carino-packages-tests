@@ -229,33 +229,34 @@ static void __attribute__ ((constructor)) init(void)
 int main(int argc, char *argv[])
 {
 	int ret;
+	const struct pin *pin = &pin13;
 
-	ret = pin_pinMode(&pin13, A20_GPIO_OUT);
+	ret = pin_pinMode(pin, A20_GPIO_OUT);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_pinMode");
 
 	/* let it blink, let it blink, let it blink, oh let it blink ! */
-	ret = pin_digitalWrite(&pin13, HIGH);
+	ret = pin_digitalWrite(pin, HIGH);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 	sleep(1);
-	ret = pin_digitalWrite(&pin13, LOW);
+	ret = pin_digitalWrite(pin, LOW);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 	sleep(1);
-	ret = pin_digitalWrite(&pin13, HIGH);
+	ret = pin_digitalWrite(pin, HIGH);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 	sleep(1);
-	ret = pin_digitalWrite(&pin13, LOW);
+	ret = pin_digitalWrite(pin, LOW);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 	sleep(1);
-	ret = pin_digitalWrite(&pin13, HIGH);
+	ret = pin_digitalWrite(pin, HIGH);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 	sleep(1);
-	ret = pin_digitalWrite(&pin13, LOW);
+	ret = pin_digitalWrite(pin, LOW);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 
