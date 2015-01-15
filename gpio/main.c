@@ -30,15 +30,12 @@
 #define A20_GPIO_IN 0
 #define A20_GPIO_OUT 1
 
-/* TODO remove some unneeded globals */
-static long page_size;
 
+/* address at which the mmapping of /dev/mem starts */
 static void *map_base;
 
 static long mapping_size;
 
-/* absolute address to which corresponds the start of the /dev/mem mapping */
-static long mapping_absolute_start;
 
 /* where is mapped the first register of PIO */
 static void *pio_start;
@@ -167,6 +164,9 @@ static void __attribute__ ((constructor)) init(void)
 	int fd;
 	long page_size_mask;
 	long min_size;
+	long page_size;
+	/* absolute address to which corresponds the /dev/mem mapping start */
+	long mapping_absolute_start;
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd == -1)
