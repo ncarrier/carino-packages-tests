@@ -190,7 +190,7 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
-	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
+	if (upp_bit < low_bit || upp_bit >= 32 || low_bit >= 32)
 		return false;
 
 	return true;
