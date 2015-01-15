@@ -30,12 +30,13 @@
 #define A20_GPIO_IN 0
 #define A20_GPIO_OUT 1
 
+#define LOW 0
+#define HIGH 1
 
 /* address at which the mmapping of /dev/mem starts */
 static void *map_base;
 
 static long mapping_size;
-
 
 /* where is mapped the first register of PIO */
 static void *pio_start;
@@ -46,6 +47,10 @@ struct pin {
 	uint8_t upp_bit;
 	uint8_t low_bit;
 	uint8_t index;
+
+	/* data informations */
+	uint32_t dat_reg_off;
+	uint8_t dat_bit;
 };
 
 const struct pin pin13 = {
@@ -53,6 +58,9 @@ const struct pin pin13 = {
 	.upp_bit = 14,
 	.low_bit = 12,
 	.index = 11,
+
+	.dat_reg_off = A20_REG_PI_DAT_OFF,
+	.dat_bit = 11,
 };
 
 static bool register_bit_range_value_base_prm_valid(void *reg_addr,
@@ -154,6 +162,20 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 			pin->upp_bit, mode);
 }
 
+static int pin_digitalWrite(const struct pin *pin, uint8_t value)
+{
+	void *reg_addr;
+
+	if (pin == NULL)
+		return -EINVAL;
+	value = !!value;
+
+	reg_addr = ((char *)pio_start + pin->dat_reg_off);
+
+	return set_register_bit_range_value(reg_addr, pin->dat_bit,
+			pin->dat_bit, value);
+}
+
 static void __attribute__ ((destructor)) clean(void)
 {
 	munmap(map_base, mapping_size);
@@ -204,6 +226,31 @@ int main(int argc, char *argv[])
 	ret = pin_pinMode(&pin13, A20_GPIO_OUT);
 	if (ret < 0)
 		error(EXIT_FAILURE, -ret, "pin_pinMode");
+
+	/* let it blink, let it blink, let it blink, oh let it blink ! */
+	ret = pin_digitalWrite(&pin13, HIGH);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	sleep(1);
+	ret = pin_digitalWrite(&pin13, LOW);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	sleep(1);
+	ret = pin_digitalWrite(&pin13, HIGH);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	sleep(1);
+	ret = pin_digitalWrite(&pin13, LOW);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	sleep(1);
+	ret = pin_digitalWrite(&pin13, HIGH);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	sleep(1);
+	ret = pin_digitalWrite(&pin13, LOW);
+	if (ret < 0)
+		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
 
 	return EXIT_SUCCESS;
 }
