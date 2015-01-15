@@ -60,7 +60,15 @@ struct pin {
 };
 
 const struct pin pins[] = {
-	[13] = {
+	[12] = { /* port PI13 */
+		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
+		.upp_bit = 22,
+		.low_bit = 20,
+
+		.dat_reg_off = A20_REG_PI_DAT_OFF,
+		.dat_bit = 13,
+	},
+	[13] = { /* port PI11 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.upp_bit = 14,
 		.low_bit = 12,
