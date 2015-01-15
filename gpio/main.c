@@ -43,14 +43,15 @@ static long mapping_absolute_start;
 /* where is mapped the first register of PIO */
 static void *pio_start;
 
-struct gpio {
+struct pin {
+	/* configuration informations */
 	uint32_t cfg_reg_off;
 	uint8_t upp_bit;
 	uint8_t low_bit;
 	uint8_t index;
 };
 
-const struct gpio gpio13 = {
+const struct pin pin13 = {
 	.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 	.upp_bit = 14,
 	.low_bit = 12,
@@ -130,29 +131,30 @@ static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 	return 0;
 }
 
-static int gpio_pinMode(const struct gpio *g, uint32_t mode)
+static int pin_pinMode(const struct pin *pin, uint32_t mode)
 {
 	void *reg_addr;
 	int ret;
 	uint32_t value;
 
-	if (g == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
+	if (pin == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
 
-	reg_addr = ((char *)pio_start + g->cfg_reg_off);
+	reg_addr = ((char *)pio_start + pin->cfg_reg_off);
 
-	ret = get_register_bit_range_value(reg_addr, g->low_bit, g->upp_bit,
+	ret = get_register_bit_range_value(reg_addr, pin->low_bit, pin->upp_bit,
 		&value);
 	if (ret < 0) {
 		fprintf(stderr, "failed to read value of register 0x%x\n",
-				g->cfg_reg_off);
+				pin->cfg_reg_off);
+		return ret;
 	}
 
 	if (value == mode)
 		return 0;
 
-	return set_register_bit_range_value(reg_addr, g->low_bit, g->upp_bit,
-			mode);
+	return set_register_bit_range_value(reg_addr, pin->low_bit,
+			pin->upp_bit, mode);
 }
 
 static void __attribute__ ((destructor)) clean(void)
@@ -199,9 +201,9 @@ int main(int argc, char *argv[])
 {
 	int ret;
 
-	ret = gpio_pinMode(&gpio13, A20_GPIO_OUT);
+	ret = pin_pinMode(&pin13, A20_GPIO_OUT);
 	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "gpio_pinMode");
+		error(EXIT_FAILURE, -ret, "pin_pinMode");
 
 	return EXIT_SUCCESS;
 }
