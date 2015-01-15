@@ -13,10 +13,13 @@
 #include <error.h>
 
 /* documentation used is A20 user manual V1.2 20131210.pdf */
+#define A20_PIO_REG_SIZE sizeof(uint32_t)
 
 #define A20_PIO_BASE_ADDR 0x01C20800
+#define A20_REG_PIO_LAST_OFF A20_REG_PIO_INT_DEB_OFF
+
 /* base + last register offset + last register size */
-#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_REG_PIO_INT_DEB_OFF + 4)
+#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_REG_PIO_LAST_OFF + A20_PIO_REG_SIZE)
 
 #define A20_REG_PI_CFG1_OFF 0x124
 #define A20_REG_PI_DAT_OFF 0x130
@@ -53,25 +56,64 @@ const struct gpio gpio13 = {
 	.index = 11,
 };
 
-/* TODO make this function generic, write a value in a bit sequence */
-static int gpio_pinMode(const struct gpio *g, int mode)
+/* TODO implement
+static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
+		uint8_t upp_bit, uint32_t *value)
+{
+
+}
+*/
+
+/* low_bit and upp_bit are inclusives */
+static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
+		uint8_t upp_bit, uint32_t value)
 {
 	volatile uint32_t reg_value;
-	volatile uint32_t reg_new_value;
+	uint8_t bit_span;
+	uint32_t bit_mask;
+
+	/* check reg_addr is in range */
+	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+		return -EINVAL;
+	/* check bounds are strictly ordered and less than 32 */
+	if (upp_bit <= low_bit || upp_bit >= 32 || low_bit >= 32)
+		return -EINVAL;
+	bit_span = upp_bit - low_bit + 1;
+	bit_mask = (1 << bit_span) - 1;
+	/* check value doesn't have more bits than fit in the bit span */
+	if ((value & bit_mask) != value) {
+		fprintf(stderr, "value 0x%"PRIu32" doesn't fit in [%d:%d]\n",
+				value, low_bit, upp_bit);
+		return -EINVAL;
+	}
+
+	/* shift value and mask to their right bit offset */
+	bit_mask <<= low_bit;
+	value <<= low_bit;
+
+	/* read, compute and update */
+	reg_value = *(volatile uint32_t*)reg_addr;
+	/* shut off the bits in range */
+	reg_value &= ~bit_mask;
+	reg_value |= value;
+	*(volatile uint32_t*)reg_addr = reg_value;
+
+	printf("reg_value = 0x%x\n", reg_value);
+
+	return 0;
+}
+
+static int gpio_pinMode(const struct gpio *g, uint32_t mode)
+{
 	void *reg_addr;
 
 	if (g == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
 
 	reg_addr = ((char *)pio_start + g->cfg_reg_off);
-	reg_value = *(volatile uint32_t*)reg_addr;
 
-	printf("reg_value = 0x%x\n", reg_value);
-	reg_new_value = reg_value & ~(7 << g->low_bit);
-	reg_new_value |= mode << g->low_bit;
-	*(volatile uint32_t*)reg_addr = reg_new_value;
-
-	return 0;
+	return set_register_bit_range_value(reg_addr, g->low_bit, g->upp_bit,
+			mode);
 }
 
 static void __attribute__ ((destructor)) clean(void)
