@@ -60,14 +60,16 @@ struct pin {
 	uint8_t dat_bit;
 };
 
-const struct pin pin13 = {
-	.cfg_reg_off = A20_REG_PI_CFG1_OFF,
-	.upp_bit = 14,
-	.low_bit = 12,
-	.index = 11,
+const struct pin pins[] = {
+	[13] = {
+		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
+		.upp_bit = 14,
+		.low_bit = 12,
+		.index = 11,
 
-	.dat_reg_off = A20_REG_PI_DAT_OFF,
-	.dat_bit = 11,
+		.dat_reg_off = A20_REG_PI_DAT_OFF,
+		.dat_bit = 11,
+	},
 };
 
 static bool register_bit_range_value_base_prm_valid(void *reg_addr,
@@ -226,39 +228,47 @@ static void __attribute__ ((constructor)) init(void)
 	close(fd);
 }
 
+static void pinMode(uint8_t pin, uint8_t mode)
+{
+	const struct pin *p;
+
+	if (pin > A5 || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
+		return;
+
+	p = pins + pin;
+	pin_pinMode(p, mode);
+}
+
+static void digitalWrite(uint8_t pin, uint8_t value)
+{
+	if (pin > A5)
+		return;
+
+	pin_digitalWrite(pins + pin, !!value);
+}
+
 int main(int argc, char *argv[])
 {
-	int ret;
-	const struct pin *pin = &pin13;
+	int pin = 13;
 
-	ret = pin_pinMode(pin, A20_GPIO_OUT);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_pinMode");
+	if (argc > 1)
+		pin = atoi(argv[1]);
+
+	pinMode(pin, A20_GPIO_OUT);
 
 	/* let it blink, let it blink, let it blink, oh let it blink ! */
-	ret = pin_digitalWrite(pin, HIGH);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, HIGH);
 	sleep(1);
-	ret = pin_digitalWrite(pin, LOW);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, LOW);
 	sleep(1);
-	ret = pin_digitalWrite(pin, HIGH);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, HIGH);
 	sleep(1);
-	ret = pin_digitalWrite(pin, LOW);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, LOW);
 	sleep(1);
-	ret = pin_digitalWrite(pin, HIGH);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, HIGH);
 	sleep(1);
-	ret = pin_digitalWrite(pin, LOW);
-	if (ret < 0)
-		error(EXIT_FAILURE, -ret, "pin_digitalWrite");
+	digitalWrite(pin, LOW);
+	sleep(1);
 
 	return EXIT_SUCCESS;
 }
