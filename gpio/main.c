@@ -33,6 +33,13 @@
 #define LOW 0
 #define HIGH 1
 
+#define A0 14
+#define A1 15
+#define A2 16
+#define A3 17
+#define A4 18
+#define A5 19
+
 /* address at which the mmapping of /dev/mem starts */
 static void *map_base;
 
