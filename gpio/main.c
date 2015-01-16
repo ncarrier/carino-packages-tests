@@ -36,6 +36,15 @@
 
 #define A20_REG_PIO_INT_DEB_OFF 0x218
 
+
+#define A20_TP_BASE_ADDR 0x01C25000
+#define A20_TP_LAST_REG_OFF A20_REG_TP_PORT_DATA_OFF
+#define A20_TP_UPPER_ADDR (A20_TP_BASE_ADDR + A20_TP_LAST_REG_OFF + A20_REG_SIZE)
+
+#define A20_REG_TP_IO_CONFIG_OFF 0x28
+#define A20_REG_TP_PORT_DATA_OFF 0x2c
+
+
 #define A20_GPIO_IN 0
 #define A20_GPIO_OUT 1
 
@@ -180,6 +189,39 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 11,
+	},
+
+	[A0] = { /* port TP_XP / XP_TP */
+		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
+		.upp_bit = 2,
+		.low_bit = 0,
+
+		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
+		.dat_bit = 0,
+	},
+	[A1] = { /* port TP_XN / XN_TP */
+		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
+		.upp_bit = 6,
+		.low_bit = 4,
+
+		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
+		.dat_bit = 1,
+	},
+	[A2] = { /* port TP_YP / YP_TP */
+		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
+		.upp_bit = 10,
+		.low_bit = 8,
+
+		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
+		.dat_bit = 2,
+	},
+	[A3] = { /* port TP_YN / YN_TP */
+		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
+		.upp_bit = 14,
+		.low_bit = 12,
+
+		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
+		.dat_bit = 3,
 	},
 };
 
