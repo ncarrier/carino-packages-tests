@@ -69,7 +69,6 @@ static void *pio_start;
 struct pin {
 	/* configuration informations */
 	uint32_t cfg_reg_off;
-	uint8_t upp_bit;
 	uint8_t low_bit;
 
 	/* data informations */
@@ -80,7 +79,6 @@ struct pin {
 const struct pin pins[] = {
 	[0] = { /* port PI19 */
 		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
-		.upp_bit = 14,
 		.low_bit = 12,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -88,7 +86,6 @@ const struct pin pins[] = {
 	},
 	[1] = { /* port PI18 */
 		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
-		.upp_bit = 10,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -96,7 +93,6 @@ const struct pin pins[] = {
 	},
 	[2] = { /* port PH7 */
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
-		.upp_bit = 30,
 		.low_bit = 28,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
@@ -104,7 +100,6 @@ const struct pin pins[] = {
 	},
 	[3] = { /* port PH6 */
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
-		.upp_bit = 26,
 		.low_bit = 24,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
@@ -112,7 +107,6 @@ const struct pin pins[] = {
 	},
 	[4] = { /* port PH8 */
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
-		.upp_bit = 2,
 		.low_bit = 0,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
@@ -120,7 +114,6 @@ const struct pin pins[] = {
 	},
 	[5] = { /* port PB2 */
 		.cfg_reg_off = A20_REG_PB_CFG0_OFF,
-		.upp_bit = 10,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_PB_DAT_OFF,
@@ -128,7 +121,6 @@ const struct pin pins[] = {
 	},
 	[6] = { /* port PI3 */
 		.cfg_reg_off = A20_REG_PI_CFG0_OFF,
-		.upp_bit = 14,
 		.low_bit = 12,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -136,15 +128,14 @@ const struct pin pins[] = {
 	},
 	[7] = { /* port PH9 */
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
-		.upp_bit = 6,
 		.low_bit = 4,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
 		.dat_bit = 9,
 	},
+
 	[8] = { /* port PH10 */
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
-		.upp_bit = 10,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
@@ -152,7 +143,6 @@ const struct pin pins[] = {
 	},
 	[9] = { /* port PH5 */
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
-		.upp_bit = 22,
 		.low_bit = 20,
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
@@ -160,7 +150,6 @@ const struct pin pins[] = {
 	},
 	[10] = { /* port PI10 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
-		.upp_bit = 10,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -168,7 +157,6 @@ const struct pin pins[] = {
 	},
 	[11] = { /* port PI12 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
-		.upp_bit = 18,
 		.low_bit = 16,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -176,7 +164,6 @@ const struct pin pins[] = {
 	},
 	[12] = { /* port PI13 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
-		.upp_bit = 22,
 		.low_bit = 20,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -184,7 +171,6 @@ const struct pin pins[] = {
 	},
 	[13] = { /* port PI11 */
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
-		.upp_bit = 14,
 		.low_bit = 12,
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
@@ -193,7 +179,6 @@ const struct pin pins[] = {
 
 	[A0] = { /* port TP_XP / XP_TP */
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
-		.upp_bit = 2,
 		.low_bit = 0,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
@@ -201,7 +186,6 @@ const struct pin pins[] = {
 	},
 	[A1] = { /* port TP_XN / XN_TP */
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
-		.upp_bit = 6,
 		.low_bit = 4,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
@@ -209,7 +193,6 @@ const struct pin pins[] = {
 	},
 	[A2] = { /* port TP_YP / YP_TP */
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
-		.upp_bit = 10,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
@@ -217,7 +200,6 @@ const struct pin pins[] = {
 	},
 	[A3] = { /* port TP_YN / YN_TP */
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
-		.upp_bit = 14,
 		.low_bit = 12,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
@@ -309,8 +291,8 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 
 	reg_addr = ((char *)pio_start + pin->cfg_reg_off);
 
-	ret = get_register_bit_range_value(reg_addr, pin->low_bit, pin->upp_bit,
-		&value);
+	ret = get_register_bit_range_value(reg_addr, pin->low_bit,
+			pin->low_bit + 2, &value);
 	if (ret < 0) {
 		fprintf(stderr, "failed to read value of register 0x%x\n",
 				pin->cfg_reg_off);
@@ -321,7 +303,7 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 		return 0;
 
 	return set_register_bit_range_value(reg_addr, pin->low_bit,
-			pin->upp_bit, mode);
+			pin->low_bit + 2, mode);
 }
 
 static int pin_digitalWrite(const struct pin *pin, uint8_t value)
