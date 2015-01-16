@@ -58,13 +58,16 @@
 #define A4 18
 #define A5 19
 
-/* address at which the mmapping of /dev/mem starts */
-static void *map_base;
+struct mapping {
+	/** address at which the mmapping of /dev/mem starts */
+	void *base;
+	/** where is mapped the first register of PIO */
+	void *start;
+	/** size mapped in memory, starting from base */
+	long size;
+};
 
-static long mapping_size;
-
-/* where is mapped the first register of PIO */
-static void *pio_start;
+static struct mapping pio;
 
 struct pin {
 	/* configuration informations */
@@ -215,7 +218,7 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 		uint8_t low_bit, uint8_t upp_bit)
 {
 	/* check reg_addr is in range */
-	if (reg_addr < pio_start || reg_addr > pio_start + A20_PIO_LAST_REG_OFF)
+	if (reg_addr < pio.start || reg_addr > pio.start + A20_PIO_LAST_REG_OFF)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
 	if (upp_bit < low_bit || upp_bit >= 32 || low_bit >= 32)
@@ -293,7 +296,7 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 	if (pin == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
 
-	reg_addr = ((char *)pio_start + pin->cfg_reg_off);
+	reg_addr = ((char *)pio.start + pin->cfg_reg_off);
 
 	ret = get_register_bit_range_value(reg_addr, pin->low_bit,
 			pin->low_bit + 2, &value);
@@ -318,7 +321,7 @@ static int pin_digitalWrite(const struct pin *pin, uint8_t value)
 		return -EINVAL;
 	value = !!value;
 
-	reg_addr = ((char *)pio_start + pin->dat_reg_off);
+	reg_addr = ((char *)pio.start + pin->dat_reg_off);
 
 	return set_register_bit_range_value(reg_addr, pin->dat_bit,
 			pin->dat_bit, value);
@@ -331,7 +334,7 @@ static int pin_digitalRead(const struct pin *pin, uint32_t *value)
 	if (pin == NULL || value == NULL)
 		return -EINVAL;
 
-	reg_addr = ((char *)pio_start + pin->dat_reg_off);
+	reg_addr = ((char *)pio.start + pin->dat_reg_off);
 
 	return get_register_bit_range_value(reg_addr, pin->dat_bit,
 			pin->dat_bit, value);
@@ -354,7 +357,7 @@ static int digitalRead(uint8_t pin)
 
 static void __attribute__ ((destructor)) clean(void)
 {
-	munmap(map_base, mapping_size);
+	munmap(pio.base, pio.size);
 }
 
 static void __attribute__ ((constructor)) init(void)
@@ -381,15 +384,15 @@ static void __attribute__ ((constructor)) init(void)
 	min_size = A20_PIO_UPPER_ADDR - mapping_absolute_start;
 
 	/* size rounded to the above page_size multiple */
-	mapping_size = min_size & ~page_size_mask;
-	if (mapping_size != min_size)
-		mapping_size += page_size;
+	pio.size = min_size & ~page_size_mask;
+	if (pio.size != min_size)
+		pio.size += page_size;
 
-	map_base = mmap(NULL, mapping_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+	pio.base = mmap(NULL, pio.size, PROT_READ | PROT_WRITE, MAP_SHARED,
 			fd, mapping_absolute_start);
-	if (map_base == MAP_FAILED)
+	if (pio.base == MAP_FAILED)
 		error(EXIT_FAILURE, errno, "mmap");
-	pio_start = (void *)((int)map_base +
+	pio.start = (void *)((int)pio.base +
 			(A20_PIO_BASE_ADDR & page_size_mask));
 
 	close(fd);
