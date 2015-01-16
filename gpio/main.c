@@ -14,13 +14,13 @@
 #include <error.h>
 
 /* documentation used is A20 user manual V1.2 20131210.pdf */
-#define A20_PIO_REG_SIZE sizeof(uint32_t)
+#define A20_REG_SIZE sizeof(uint32_t)
 
 #define A20_PIO_BASE_ADDR 0x01C20800
-#define A20_REG_PIO_LAST_OFF A20_REG_PIO_INT_DEB_OFF
+#define A20_PIO_LAST_REG_OFF A20_REG_PIO_INT_DEB_OFF
 
 /* base + last register offset + last register size */
-#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_REG_PIO_LAST_OFF + A20_PIO_REG_SIZE)
+#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_PIO_LAST_REG_OFF + A20_REG_SIZE)
 
 #define A20_REG_PB_CFG0_OFF 0x24
 #define A20_REG_PB_DAT_OFF 0x34
@@ -187,7 +187,7 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 		uint8_t low_bit, uint8_t upp_bit)
 {
 	/* check reg_addr is in range */
-	if (reg_addr < pio_start || reg_addr > pio_start + A20_REG_PIO_LAST_OFF)
+	if (reg_addr < pio_start || reg_addr > pio_start + A20_PIO_LAST_REG_OFF)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
 	if (upp_bit < low_bit || upp_bit >= 32 || low_bit >= 32)
