@@ -68,12 +68,16 @@ static void *pio_start;
 
 struct pin {
 	/* configuration informations */
+	/** offset of the register set, used to select the mapping too */
 	uint32_t cfg_reg_off;
+	/** low control bit for setting the pin's function high bit is low + 2 */
 	uint8_t low_bit;
 
 	/* data informations */
+	/** offset of the register holding the GPIO data */
 	uint32_t dat_reg_off;
-	uint8_t dat_bit; /* must be equal to x in PIx */
+	/** bit to alter in the dat_reg for setting / reading the value */
+	uint8_t dat_bit; /* must be equal to x in PIx, PHx ... */
 };
 
 const struct pin pins[] = {
