@@ -20,7 +20,8 @@
 #define A20_PIO_LAST_REG_OFF A20_REG_PIO_INT_DEB_OFF
 
 /* base + last register offset + last register size */
-#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_PIO_LAST_REG_OFF + A20_REG_SIZE)
+#define A20_PIO_UPPER_ADDR (A20_PIO_BASE_ADDR + A20_PIO_LAST_REG_OFF + \
+		A20_REG_SIZE)
 
 #define A20_REG_PB_CFG0_OFF 0x24
 #define A20_REG_PB_DAT_OFF 0x34
@@ -39,10 +40,21 @@
 
 #define A20_TP_BASE_ADDR 0x01C25000
 #define A20_TP_LAST_REG_OFF A20_REG_TP_PORT_DATA_OFF
-#define A20_TP_UPPER_ADDR (A20_TP_BASE_ADDR + A20_TP_LAST_REG_OFF + A20_REG_SIZE)
+#define A20_TP_UPPER_ADDR (A20_TP_BASE_ADDR + A20_TP_LAST_REG_OFF + \
+		A20_REG_SIZE)
 
 #define A20_REG_TP_IO_CONFIG_OFF 0x28
 #define A20_REG_TP_PORT_DATA_OFF 0x2c
+
+
+#define A20_LRADC_BASE_ADDR 0x01C22800
+#define A20_LRADC_LAST_REG_OFF A20_REG_LRADC_DATA_1_OFF
+#define A20_LRADC_UPPER_ADDR (A20_LRADC_BASE_ADDR + A20_LRADC_LAST_REG_OFF + \
+		A20_REG_SIZE)
+
+#define A20_REG_LRADC_CTRL_OFF 0x00
+#define A20_REG_LRADC_DATA_0_OFF 0xC
+#define A20_REG_LRADC_DATA_1_OFF 0x10
 
 
 #define A20_GPIO_IN 0
@@ -58,7 +70,23 @@
 #define A4 18
 #define A5 19
 
+enum mapping_name {
+	MAPPING_PIO,
+	MAPPING_TP,
+	MAPPING_LRADC,
+
+	MAPPING_FIRST = MAPPING_PIO,
+	MAPPING_LAST = MAPPING_LRADC,
+};
+
 struct mapping {
+	/* input constant parameters */
+	/** start offset of the port registers mapping */
+	int base_offset;
+	/** upper bound of the register addresses we're interested in */
+	int upper_addr;
+
+	/* fields initialized at init */
 	/** address at which the mmapping of /dev/mem starts */
 	void *base;
 	/** where is mapped the first register of PIO */
@@ -67,13 +95,32 @@ struct mapping {
 	long size;
 };
 
-static struct mapping pio;
+static struct mapping map[] = {
+	[MAPPING_PIO] = {
+		.base_offset = A20_PIO_BASE_ADDR,
+		.upper_addr = A20_PIO_UPPER_ADDR,
+		0,
+	},
+	[MAPPING_TP] = {
+		.base_offset = A20_TP_BASE_ADDR,
+		.upper_addr = A20_TP_UPPER_ADDR,
+		0,
+	},
+	[MAPPING_LRADC] = {
+		.base_offset = A20_LRADC_BASE_ADDR,
+		.upper_addr = A20_LRADC_UPPER_ADDR,
+		0,
+	},
+};
 
 struct pin {
+	/** index in pins array */
+	uint8_t idx;
+
 	/* configuration informations */
 	/** offset of the register set, used to select the mapping too */
 	uint32_t cfg_reg_off;
-	/** low control bit for setting the pin's function high bit is low + 2 */
+	/** low control bit for setting the pin's function upp bit is low + 2 */
 	uint8_t low_bit;
 
 	/* data informations */
@@ -85,6 +132,8 @@ struct pin {
 
 const struct pin pins[] = {
 	[0] = { /* port PI19 */
+		.idx = 0,
+
 		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
 		.low_bit = 12,
 
@@ -92,6 +141,8 @@ const struct pin pins[] = {
 		.dat_bit = 19,
 	},
 	[1] = { /* port PI18 */
+		.idx = 1,
+
 		.cfg_reg_off = A20_REG_PI_CFG2_OFF,
 		.low_bit = 8,
 
@@ -99,6 +150,8 @@ const struct pin pins[] = {
 		.dat_bit = 18,
 	},
 	[2] = { /* port PH7 */
+		.idx = 2,
+
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
 		.low_bit = 28,
 
@@ -106,6 +159,8 @@ const struct pin pins[] = {
 		.dat_bit = 7,
 	},
 	[3] = { /* port PH6 */
+		.idx = 3,
+
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
 		.low_bit = 24,
 
@@ -113,6 +168,8 @@ const struct pin pins[] = {
 		.dat_bit = 6,
 	},
 	[4] = { /* port PH8 */
+		.idx = 4,
+
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
 		.low_bit = 0,
 
@@ -120,6 +177,8 @@ const struct pin pins[] = {
 		.dat_bit = 8,
 	},
 	[5] = { /* port PB2 */
+		.idx = 5,
+
 		.cfg_reg_off = A20_REG_PB_CFG0_OFF,
 		.low_bit = 8,
 
@@ -127,6 +186,8 @@ const struct pin pins[] = {
 		.dat_bit = 2,
 	},
 	[6] = { /* port PI3 */
+		.idx = 6,
+
 		.cfg_reg_off = A20_REG_PI_CFG0_OFF,
 		.low_bit = 12,
 
@@ -134,6 +195,8 @@ const struct pin pins[] = {
 		.dat_bit = 3,
 	},
 	[7] = { /* port PH9 */
+		.idx = 7,
+
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
 		.low_bit = 4,
 
@@ -142,6 +205,8 @@ const struct pin pins[] = {
 	},
 
 	[8] = { /* port PH10 */
+		.idx = 8,
+
 		.cfg_reg_off = A20_REG_PH_CFG1_OFF,
 		.low_bit = 8,
 
@@ -149,6 +214,8 @@ const struct pin pins[] = {
 		.dat_bit = 10,
 	},
 	[9] = { /* port PH5 */
+		.idx = 9,
+
 		.cfg_reg_off = A20_REG_PH_CFG0_OFF,
 		.low_bit = 20,
 
@@ -156,6 +223,8 @@ const struct pin pins[] = {
 		.dat_bit = 5,
 	},
 	[10] = { /* port PI10 */
+		.idx = 10,
+
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.low_bit = 8,
 
@@ -163,6 +232,8 @@ const struct pin pins[] = {
 		.dat_bit = 10,
 	},
 	[11] = { /* port PI12 */
+		.idx = 11,
+
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.low_bit = 16,
 
@@ -170,6 +241,8 @@ const struct pin pins[] = {
 		.dat_bit = 12,
 	},
 	[12] = { /* port PI13 */
+		.idx = 12,
+
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.low_bit = 20,
 
@@ -177,6 +250,8 @@ const struct pin pins[] = {
 		.dat_bit = 13,
 	},
 	[13] = { /* port PI11 */
+		.idx = 13,
+
 		.cfg_reg_off = A20_REG_PI_CFG1_OFF,
 		.low_bit = 12,
 
@@ -184,28 +259,56 @@ const struct pin pins[] = {
 		.dat_bit = 11,
 	},
 
-	[A0] = { /* port TP_XP / XP_TP */
+	/* I absolutely don't understand how these two can function as GPIOs */
+	[A0] = { /* port LRADC0 */
+/*		.idx = A0,*/
+
+/*		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,*/
+/*		.low_bit = 12,*/
+
+/*		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,*/
+/*		.dat_bit = 3,*/
+	},
+	[A1] = { /* port LRADC1 */
+/*		.idx = A1,*/
+
+/*		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,*/
+/*		.low_bit = 12,*/
+
+/*		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,*/
+/*		.dat_bit = 3,*/
+	},
+
+	[A2] = { /* port TP_XP / XP_TP */
+		.idx = A2,
+
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
 		.low_bit = 0,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
 		.dat_bit = 0,
 	},
-	[A1] = { /* port TP_XN / XN_TP */
+	[A3] = { /* port TP_XN / XN_TP */
+		.idx = A3,
+
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
 		.low_bit = 4,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
 		.dat_bit = 1,
 	},
-	[A2] = { /* port TP_YP / YP_TP */
+	[A4] = { /* port TP_YP / YP_TP */
+		.idx = A4,
+
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
 		.low_bit = 8,
 
 		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,
 		.dat_bit = 2,
 	},
-	[A3] = { /* port TP_YN / YN_TP */
+	[A5] = { /* port TP_YN / YN_TP */
+		.idx = A5,
+
 		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,
 		.low_bit = 12,
 
@@ -214,11 +317,23 @@ const struct pin pins[] = {
 	},
 };
 
+static enum mapping_name name_from_pin(uint8_t pin)
+{
+	if (pin <= 13)
+		return MAPPING_PIO;
+	if (pin >= A2 && pin <= A5)
+		return MAPPING_TP;
+
+	return MAPPING_LRADC;
+}
+
 static bool register_bit_range_value_base_prm_valid(void *reg_addr,
+		enum mapping_name name,
 		uint8_t low_bit, uint8_t upp_bit)
 {
 	/* check reg_addr is in range */
-	if (reg_addr < pio.start || reg_addr > pio.start + A20_PIO_LAST_REG_OFF)
+	if (reg_addr < map[name].start ||
+			reg_addr > map[name].start + A20_PIO_LAST_REG_OFF)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
 	if (upp_bit < low_bit || upp_bit >= 32 || low_bit >= 32)
@@ -227,15 +342,16 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 	return true;
 }
 
-static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
-		uint8_t upp_bit, uint32_t *value)
+static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
+		uint8_t low_bit, uint8_t upp_bit, uint32_t *value)
 {
 	uint8_t bit_span;
 	uint32_t bit_mask;
 
 	if (value == NULL)
 		return -EINVAL;
-	if (!register_bit_range_value_base_prm_valid(reg_addr, low_bit, upp_bit))
+	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
+			upp_bit))
 		return -EINVAL;
 
 	bit_span = upp_bit - low_bit + 1;
@@ -254,14 +370,15 @@ static int get_register_bit_range_value(void *reg_addr, uint8_t low_bit,
 }
 
 /* low_bit and upp_bit are inclusives */
-static int set_register_bit_range_value(void *reg_addr, uint8_t low_bit,
-		uint8_t upp_bit, uint32_t value)
+static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
+		uint8_t low_bit, uint8_t upp_bit, uint32_t value)
 {
 	uint32_t reg_value;
 	uint8_t bit_span;
 	uint32_t bit_mask;
 
-	if (!register_bit_range_value_base_prm_valid(reg_addr, low_bit, upp_bit))
+	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
+			upp_bit))
 		return -EINVAL;
 
 	bit_span = upp_bit - low_bit + 1;
@@ -292,13 +409,15 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 	void *reg_addr;
 	int ret;
 	uint32_t value;
+	enum mapping_name name;
 
 	if (pin == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
+	name = name_from_pin(pin->idx);
 
-	reg_addr = ((char *)pio.start + pin->cfg_reg_off);
+	reg_addr = ((char *)map[name].start + pin->cfg_reg_off);
 
-	ret = get_register_bit_range_value(reg_addr, pin->low_bit,
+	ret = get_register_bit_range_value(reg_addr, name, pin->low_bit,
 			pin->low_bit + 2, &value);
 	if (ret < 0) {
 		fprintf(stderr, "failed to read value of register 0x%x\n",
@@ -309,34 +428,38 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 	if (value == mode)
 		return 0;
 
-	return set_register_bit_range_value(reg_addr, pin->low_bit,
+	return set_register_bit_range_value(reg_addr, name, pin->low_bit,
 			pin->low_bit + 2, mode);
 }
 
 static int pin_digitalWrite(const struct pin *pin, uint8_t value)
 {
 	void *reg_addr;
+	enum mapping_name name;
 
 	if (pin == NULL)
 		return -EINVAL;
 	value = !!value;
+	name = name_from_pin(pin->idx);
 
-	reg_addr = ((char *)pio.start + pin->dat_reg_off);
+	reg_addr = ((char *)map[name].start + pin->dat_reg_off);
 
-	return set_register_bit_range_value(reg_addr, pin->dat_bit,
+	return set_register_bit_range_value(reg_addr, name, pin->dat_bit,
 			pin->dat_bit, value);
 }
 
 static int pin_digitalRead(const struct pin *pin, uint32_t *value)
 {
 	void *reg_addr;
+	enum mapping_name name;
 
 	if (pin == NULL || value == NULL)
 		return -EINVAL;
+	name = name_from_pin(pin->idx);
 
-	reg_addr = ((char *)pio.start + pin->dat_reg_off);
+	reg_addr = ((char *)map[name].start + pin->dat_reg_off);
 
-	return get_register_bit_range_value(reg_addr, pin->dat_bit,
+	return get_register_bit_range_value(reg_addr, name, pin->dat_bit,
 			pin->dat_bit, value);
 }
 
@@ -357,10 +480,13 @@ static int digitalRead(uint8_t pin)
 
 static void __attribute__ ((destructor)) clean(void)
 {
-	munmap(pio.base, pio.size);
+	enum mapping_name n;
+
+	for (n = MAPPING_FIRST; n <= MAPPING_LAST; n++)
+		munmap(map[n].base, map[n].size);
 }
 
-static void __attribute__ ((constructor)) init(void)
+static void init_mapping(enum mapping_name n)
 {
 	int fd;
 	long page_size_mask;
@@ -369,6 +495,7 @@ static void __attribute__ ((constructor)) init(void)
 	/* absolute address to which corresponds the /dev/mem mapping start */
 	long mapping_absolute_start;
 
+	/* TODO open / close dev/mem only once */
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd == -1)
 		error(EXIT_FAILURE, errno, "open");
@@ -378,24 +505,32 @@ static void __attribute__ ((constructor)) init(void)
 	page_size_mask = page_size - 1;
 
 	/* start mapping at a page boundary */
-	mapping_absolute_start = A20_PIO_BASE_ADDR & ~page_size_mask;
+	mapping_absolute_start = map[n].base_offset & ~page_size_mask;
 
 	/* size necessary to access all the PIO registers */
-	min_size = A20_PIO_UPPER_ADDR - mapping_absolute_start;
+	min_size = map[n].upper_addr - mapping_absolute_start;
 
 	/* size rounded to the above page_size multiple */
-	pio.size = min_size & ~page_size_mask;
-	if (pio.size != min_size)
-		pio.size += page_size;
+	map[n].size = min_size & ~page_size_mask;
+	if (map[n].size != min_size)
+		map[n].size += page_size;
 
-	pio.base = mmap(NULL, pio.size, PROT_READ | PROT_WRITE, MAP_SHARED,
-			fd, mapping_absolute_start);
-	if (pio.base == MAP_FAILED)
+	map[n].base = mmap(NULL, map[n].size, PROT_READ | PROT_WRITE,
+			MAP_SHARED, fd, mapping_absolute_start);
+	if (map[n].base == MAP_FAILED)
 		error(EXIT_FAILURE, errno, "mmap");
-	pio.start = (void *)((int)pio.base +
-			(A20_PIO_BASE_ADDR & page_size_mask));
+	map[n].start = (void *)((int)map[n].base +
+			(map[n].base_offset & page_size_mask));
 
 	close(fd);
+}
+
+static void __attribute__ ((constructor)) init(void)
+{
+	enum mapping_name n;
+
+	for (n = MAPPING_FIRST; n <= MAPPING_LAST; n++)
+		init_mapping(n);
 }
 
 static void pinMode(uint8_t pin, uint8_t mode)
@@ -417,12 +552,30 @@ static void digitalWrite(uint8_t pin, uint8_t value)
 	pin_digitalWrite(pins + pin, !!value);
 }
 
+static void usage(int status)
+{
+	printf("tests_gpio GPIO\n\twith GPIO being in [0,13]U[A0,A5]\n");
+
+	exit(status);
+}
+
 int main(int argc, char *argv[])
 {
 	int pin = 13;
 
-	if (argc > 1)
-		pin = atoi(argv[1]);
+	if (argc > 1) {
+		if (argv[1][0] == 'A') {
+			if (argv[1][1] == '\0')
+				usage(EXIT_FAILURE);
+
+			argv[1][2] = '\0';
+			pin = atoi(argv[1] + 1) + 14;
+		} else {
+			pin = atoi(argv[1]);
+		}
+	}
+
+	printf("working with pin %d\n", pin);
 
 	pinMode(pin, A20_GPIO_OUT);
 
