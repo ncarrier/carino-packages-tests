@@ -1,17 +1,10 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-#include <error.h>
 
 #include <Arduino.h>
 
@@ -24,8 +17,8 @@ static void usage(int status)
 
 int main(int argc, char *argv[])
 {
-	int i = 100;
-	int pin = 13;
+	int i;
+	int pin = 3;
 
 	if (argc > 1) {
 		if (argv[1][0] == 'A') {
