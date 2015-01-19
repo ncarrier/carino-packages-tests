@@ -15,6 +15,8 @@
 
 #include <Arduino.h>
 
+#include <pthread.h>
+
 /* documentation used is A20 user manual V1.2 20131210.pdf */
 #define A20_REG_SIZE sizeof(uint32_t)
 
@@ -113,6 +115,12 @@ static struct mapping map[] = {
 	},
 };
 
+struct simulated_pwm {
+	uint8_t idx;
+	pthread_t thread;
+	sig_atomic_t value; /* between 0 and 255 */
+};
+
 struct pin {
 	/** index in pins array */
 	uint8_t idx;
@@ -128,7 +136,31 @@ struct pin {
 	uint32_t dat_reg_off;
 	/** bit to alter in the dat_reg for setting / reading the value */
 	uint8_t dat_bit; /* must be equal to x in PIx, PHx ... */
+
+	struct simulated_pwm *sim_pwm;
+
+	/* operations on pin */
+	void (* analogWrite)(const struct pin *pin, int value);
 };
+
+static struct simulated_pwm simulated_pwms[] = {
+		{3, 0},
+		{9, 0},
+		{10, 0},
+		{11, 0},
+};
+
+static void simulated_pwm_analogWrite(const struct pin *pin, int value)
+{
+	if (pin->sim_pwm != NULL)
+		pin->sim_pwm->value = value;
+}
+
+/* 5, 6 */
+static void real_pwm_analogWrite(const struct pin *pin, int value)
+{
+	fprintf(stderr, "%s(%"PRIu8", %d)\n", __func__, pin->idx, value);
+}
 
 const struct pin pins[] = {
 	[0] = { /* port PI19 */
@@ -166,6 +198,10 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
 		.dat_bit = 6,
+
+		.sim_pwm = simulated_pwms + 0,
+
+		.analogWrite = simulated_pwm_analogWrite,
 	},
 	[4] = { /* port PH8 */
 		.idx = 4,
@@ -184,6 +220,8 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PB_DAT_OFF,
 		.dat_bit = 2,
+
+		.analogWrite = real_pwm_analogWrite,
 	},
 	[6] = { /* port PI3 */
 		.idx = 6,
@@ -193,6 +231,8 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 3,
+
+		.analogWrite = real_pwm_analogWrite,
 	},
 	[7] = { /* port PH9 */
 		.idx = 7,
@@ -221,6 +261,10 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
 		.dat_bit = 5,
+
+		.sim_pwm = simulated_pwms + 1,
+
+		.analogWrite = simulated_pwm_analogWrite,
 	},
 	[10] = { /* port PI10 */
 		.idx = 10,
@@ -230,6 +274,10 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 10,
+
+		.sim_pwm = simulated_pwms + 2,
+
+		.analogWrite = simulated_pwm_analogWrite,
 	},
 	[11] = { /* port PI12 */
 		.idx = 11,
@@ -239,6 +287,10 @@ const struct pin pins[] = {
 
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 12,
+
+		.sim_pwm = simulated_pwms + 3,
+
+		.analogWrite = simulated_pwm_analogWrite,
 	},
 	[12] = { /* port PI13 */
 		.idx = 12,
@@ -463,7 +515,7 @@ static int pin_digitalRead(const struct pin *pin, uint32_t *value)
 			pin->dat_bit, value);
 }
 
-static void __attribute__ ((destructor)) clean(void)
+static void __attribute__ ((destructor)) libarduino_clean(void)
 {
 	enum mapping_name n;
 
@@ -510,12 +562,61 @@ static void init_mapping(enum mapping_name n)
 	close(fd);
 }
 
-static void __attribute__ ((constructor)) init(void)
+/*
+ * frequency for pwm should ~ 490 Hz (near to that of a real arduino)
+ * in microseconds : 1000000 / 500 = 2041
+ * each period is divided in 256 slices of ~8µs
+ * which gives a frequency of 1000000 / (256 * 8) =~ 488Hz
+ */
+
+/* in µs */
+#define PWM_SLICE 8
+
+static void *simulated_pwm_update_routine(void *data)
+{
+	struct simulated_pwm *pwm = data;
+	const struct pin *pin = pins + pwm->idx;
+	int value, complement;
+
+	while (true) {
+		value = pwm->value;
+		complement = 255 - value;
+		if (value != 0) {
+			pin_digitalWrite(pin, HIGH);
+			usleep(PWM_SLICE * value);
+		}
+		if (complement != 0) {
+			pin_digitalWrite(pin, LOW);
+			usleep(PWM_SLICE * complement);
+		}
+	}
+
+	return NULL;
+}
+
+static void init_simulated_pwm(struct simulated_pwm *simulated_pwm)
+{
+	pthread_create(&simulated_pwm->thread, NULL,
+			simulated_pwm_update_routine, simulated_pwm);
+}
+
+static void init_simulated_pwms()
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+		init_simulated_pwm(simulated_pwms + i);
+}
+
+static void __attribute__ ((constructor)) libarduino_init(void)
 {
 	enum mapping_name n;
 
+	/* mmap dev/mem for the register ranges we wan't to gain access to */
 	for (n = MAPPING_FIRST; n <= MAPPING_LAST; n++)
 		init_mapping(n);
+
+	init_simulated_pwms();
 }
 
 void pinMode(uint8_t pin, uint8_t mode)
@@ -527,6 +628,20 @@ void pinMode(uint8_t pin, uint8_t mode)
 
 	p = pins + pin;
 	pin_pinMode(p, mode);
+}
+
+void analogWrite(uint8_t pin, int value)
+{
+	const struct pin *ppin;
+
+	if (pin > A5)
+		return;
+	value = constrain(value, 0, 255);
+
+	ppin = pins + pin;
+
+	if (ppin->analogWrite)
+		ppin->analogWrite(pins + pin, value);
 }
 
 void digitalWrite(uint8_t pin, uint8_t value)
@@ -551,86 +666,3 @@ int digitalRead(uint8_t pin)
 
 	return value;
 }
-
-//#define PERIOD 20000
-//
-//int main(int argc, char *argv[])
-//{
-//	int i = 100;
-//	int pin = 13;
-//	int t;
-//
-//	/* TODO handle the A0, A1 ... cases */
-//	if (argc > 1) {
-//		if (argv[1][0] == 'A') {
-//			if (argv[1][1] == '\0')
-//				usage(EXIT_FAILURE);
-//
-//			argv[1][2] = '\0';
-//			pin = atoi(argv[1] + 1) + 14;
-//		} else {
-//			pin = atoi(argv[1]);
-//		}
-//	}
-//
-//	printf("working with pin %d\n", pin);
-//
-//	printf("period is %f\n", PERIOD / 1000000000.);
-//
-//	pinMode(pin, A20_GPIO_OUT);
-//
-//	/*
-//	0
-//	0.83
-//	1.65
-//	2.48
-//	*/
-//	t = 0;
-//	printf("duty cycle is %f\n", t / 100.);
-//	while (i--) {
-//		digitalWrite(pin, HIGH);
-//		usleep(t * PERIOD / 100);
-//		digitalWrite(pin, LOW);
-//		usleep((100 - t) * PERIOD / 100);
-//	}
-//	i = 100;
-//	t = 25;
-//	printf("duty cycle is %f\n", t / 100.);
-//	while (i--) {
-//		digitalWrite(pin, HIGH);
-//		usleep(t * PERIOD / 100);
-//		digitalWrite(pin, LOW);
-//		usleep((100 - t) * PERIOD / 100);
-//	}
-//	i = 100;
-//	t = 50;
-//	printf("duty cycle is %f\n", t / 100.);
-//	while (i--) {
-//		digitalWrite(pin, HIGH);
-//		usleep(t * PERIOD / 100);
-//		digitalWrite(pin, LOW);
-//		usleep((100 - t) * PERIOD / 100);
-//	}
-//	i = 100;
-//	t = 75;
-//	printf("duty cycle is %f\n", t / 100.);
-//	while (i--) {
-//		digitalWrite(pin, HIGH);
-//		usleep(t * PERIOD / 100);
-//		digitalWrite(pin, LOW);
-//		usleep((100 - t) * PERIOD / 100);
-//	}
-//	i = 100;
-//	t = 100;
-//	printf("duty cycle is %f\n", t / 100.);
-//	while (i--) {
-//		digitalWrite(pin, HIGH);
-//		usleep(t * PERIOD / 100);
-//		digitalWrite(pin, LOW);
-//		usleep((100 - t) * PERIOD / 100);
-//	}
-//
-//	digitalWrite(pin, HIGH);
-//
-//	return EXIT_SUCCESS;
-//}

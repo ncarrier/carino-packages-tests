@@ -22,15 +22,11 @@ static void usage(int status)
 	exit(status);
 }
 
-#define PERIOD 20000
-
 int main(int argc, char *argv[])
 {
 	int i = 100;
 	int pin = 13;
-	int t;
 
-	/* TODO handle the A0, A1 ... cases */
 	if (argc > 1) {
 		if (argv[1][0] == 'A') {
 			if (argv[1][1] == '\0')
@@ -45,62 +41,24 @@ int main(int argc, char *argv[])
 
 	printf("working with pin %d\n", pin);
 
-	printf("period is %f\n", PERIOD / 1000000000.);
-
 	pinMode(pin, OUTPUT);
 
-	/*
-	0
-	0.83
-	1.65
-	2.48
-	*/
-	t = 0;
-	printf("duty cycle is %f\n", t / 100.);
-	while (i--) {
-		digitalWrite(pin, HIGH);
-		usleep(t * PERIOD / 100);
-		digitalWrite(pin, LOW);
-		usleep((100 - t) * PERIOD / 100);
+	for (i = 0; i <= 255; i++) {
+		analogWrite(pin, i);
+		usleep(3906);
 	}
-	i = 100;
-	t = 25;
-	printf("duty cycle is %f\n", t / 100.);
-	while (i--) {
-		digitalWrite(pin, HIGH);
-		usleep(t * PERIOD / 100);
-		digitalWrite(pin, LOW);
-		usleep((100 - t) * PERIOD / 100);
+	for (i = 255; i >= 0; i--) {
+		analogWrite(pin, i);
+		usleep(3906);
 	}
-	i = 100;
-	t = 50;
-	printf("duty cycle is %f\n", t / 100.);
-	while (i--) {
-		digitalWrite(pin, HIGH);
-		usleep(t * PERIOD / 100);
-		digitalWrite(pin, LOW);
-		usleep((100 - t) * PERIOD / 100);
+	for (i = 0; i <= 255; i++) {
+		analogWrite(pin, i);
+		usleep(3906);
 	}
-	i = 100;
-	t = 75;
-	printf("duty cycle is %f\n", t / 100.);
-	while (i--) {
-		digitalWrite(pin, HIGH);
-		usleep(t * PERIOD / 100);
-		digitalWrite(pin, LOW);
-		usleep((100 - t) * PERIOD / 100);
+	for (i = 255; i >= 0; i--) {
+		analogWrite(pin, i);
+		usleep(3906);
 	}
-	i = 100;
-	t = 100;
-	printf("duty cycle is %f\n", t / 100.);
-	while (i--) {
-		digitalWrite(pin, HIGH);
-		usleep(t * PERIOD / 100);
-		digitalWrite(pin, LOW);
-		usleep((100 - t) * PERIOD / 100);
-	}
-
-	digitalWrite(pin, HIGH);
 
 	return EXIT_SUCCESS;
 }
