@@ -148,6 +148,9 @@ static struct simulated_pwm simulated_pwms[] = {
 		{9, 0},
 		{10, 0},
 		{11, 0},
+
+		/* end of array */
+		{255, 0},
 };
 
 static void simulated_pwm_analogWrite(const struct pin *pin, int value)
@@ -604,7 +607,7 @@ static void init_simulated_pwms()
 {
 	int i;
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; simulated_pwms[i].idx != 255; i++)
 		init_simulated_pwm(simulated_pwms + i);
 }
 
@@ -641,15 +644,33 @@ void analogWrite(uint8_t pin, int value)
 	ppin = pins + pin;
 
 	if (ppin->analogWrite)
-		ppin->analogWrite(pins + pin, value);
+		ppin->analogWrite(ppin, value);
+}
+
+static bool is_simulated_pwm_pin(uint8_t pin)
+{
+	int i;
+
+	for (i = 0; simulated_pwms[i].idx != 255; i++)
+		if (pin == simulated_pwms[i].idx)
+			return true;
+
+	return false;
 }
 
 void digitalWrite(uint8_t pin, uint8_t value)
 {
+	const struct pin *ppin;
+
 	if (pin > A5)
 		return;
 
-	pin_digitalWrite(pins + pin, !!value);
+	ppin = pins + pin;
+
+	if (is_simulated_pwm_pin(pin))
+		ppin->analogWrite(ppin, value ? 255 : 0);
+	else
+		pin_digitalWrite(ppin, !!value);
 }
 
 int digitalRead(uint8_t pin)
