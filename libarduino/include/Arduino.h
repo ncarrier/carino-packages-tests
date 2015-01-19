@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include "binary.h"
+//#include "binary.h"
 #include <inttypes.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -24,8 +24,8 @@ extern "C"{
 #define OUTPUT 0x1
 #define INPUT_PULLUP 0x2
 
-#define true 0x1
-#define false 0x0
+//#define true 0x1
+//#define false 0x0
 
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI 1.5707963267948966192313216916398
@@ -137,6 +137,6 @@ long map(long, long, long, long, long);
 
 #endif
 
-#include "pins_arduino.h"
+//#include "pins_arduino.h"
 
 #endif
