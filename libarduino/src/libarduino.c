@@ -709,11 +709,22 @@ static void init_mappings()
 	close(fd);
 }
 
+static void init_gpios(void)
+{
+	/* TODO init the gpios to a known state, e.g. OUTPUT / LOW */
+}
+
+static void init_pwms(void)
+{
+	init_simulated_pwms();
+	init_real_pwms();
+}
+
 static void __attribute__ ((constructor)) libarduino_init(void)
 {
 	init_mappings();
-	init_simulated_pwms();
-	init_real_pwms();
+	init_gpios();
+	init_pwms();
 }
 
 void pinMode(uint8_t pin, uint8_t mode)
