@@ -171,10 +171,14 @@ static bool is_simulated_pwm_pin(const struct pin *pin)
 	return pin->pwm.analogWrite == simulated_pwm_analogWrite;
 }
 
-/* 5, 6 */
 static void real_pwm_analogWrite(struct pin *pin, int value)
 {
 	fprintf(stderr, "%s(%"PRIu8", %d)\n", __func__, pin->idx, value);
+}
+
+static bool is_real_pwm_pin(const struct pin *pin)
+{
+	return pin->pwm.analogWrite == real_pwm_analogWrite;
 }
 
 struct pin pins[] = {
@@ -574,8 +578,8 @@ static void init_mapping(enum mapping_name n, int fd)
 }
 
 /*
- * frequency for pwm should ~ 490 Hz (near to that of a real arduino)
- * in microseconds : 1000000 / 500 = 2041
+ * frequency for pwm should be ~ 490 Hz (near to that of a real arduino)
+ * in microseconds : 1000000 / 490 = 2041
  * each period is divided in 256 slices of ~8µs
  * which gives a frequency of 1000000 / (256 * 8) =~ 488Hz
  */
@@ -610,6 +614,11 @@ static void init_simulated_pwm(struct pin *pin)
 			simulated_pwm_update_routine, pin);
 }
 
+static void init_real_pwm(struct pin *pin)
+{
+	fprintf(stderr, "%s\n", __func__);
+}
+
 static void init_simulated_pwms()
 {
 	int i;
@@ -618,6 +627,16 @@ static void init_simulated_pwms()
 	for (i = 0; i <= A5; i++, pin++)
 		if (is_simulated_pwm_pin(pin))
 			init_simulated_pwm(pin);
+}
+
+static void init_real_pwms()
+{
+	int i;
+	struct pin *pin = pins;
+
+	for (i = 0; i <= A5; i++, pin++)
+		if (is_real_pwm_pin(pin))
+			init_real_pwm(pin);
 }
 
 static void init_mappings()
@@ -640,6 +659,7 @@ static void __attribute__ ((constructor)) libarduino_init(void)
 {
 	init_mappings();
 	init_simulated_pwms();
+	init_real_pwms();
 }
 
 void pinMode(uint8_t pin, uint8_t mode)
@@ -659,12 +679,12 @@ void analogWrite(uint8_t pin, int value)
 
 	if (pin > A5)
 		return;
+	ppin = pins + pin;
+	if (ppin->pwm.analogWrite == NULL)
+		return;
 	value = constrain(value, 0, 255);
 
-	ppin = pins + pin;
-
-	if (ppin->pwm.analogWrite)
-		ppin->pwm.analogWrite(ppin, value);
+	ppin->pwm.analogWrite(ppin, value);
 }
 
 void digitalWrite(uint8_t pin, uint8_t value)
