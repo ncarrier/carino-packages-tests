@@ -264,6 +264,11 @@ static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
 	return 0;
 }
 
+static bool is_pwm_pin(const struct pin *pin)
+{
+	return pin->pwm.analogWrite != NULL;
+}
+
 static bool is_simulated_pwm_pin(const struct pin *pin);
 
 static void simulated_pwm_analogWrite(struct pin *pin, int value)
@@ -812,7 +817,7 @@ void digitalWrite(uint8_t pin, uint8_t value)
 
 	ppin = pins + pin;
 
-	if (is_simulated_pwm_pin(ppin))
+	if (is_pwm_pin(ppin))
 		ppin->pwm.analogWrite(ppin, value ? 255 : 0);
 	else
 		pin_digitalWrite(ppin, !!value);
