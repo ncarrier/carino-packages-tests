@@ -81,6 +81,8 @@
 #define A20_GPIO_IN INPUT
 #define A20_GPIO_OUT OUTPUT
 
+#define A20_GPIO_PWM 2
+
 #define A0 14
 #define A1 15
 #define A2 16
@@ -186,6 +188,82 @@ struct pin {
 	struct pwm pwm;
 };
 
+static bool register_bit_range_value_base_prm_valid(void *reg_addr,
+		enum mapping_name name,
+		uint8_t low_bit, uint8_t bit_span)
+{
+	/* check reg_addr is in range */
+	if (reg_addr < map[name].start ||
+			reg_addr >= map[name].start + map[name].upper_addr)
+		return false;
+	/* check bounds are strictly ordered and less than 32 */
+	if (bit_span == 0 || low_bit + bit_span >= 32)
+		return false;
+
+	return true;
+}
+
+/* TODO replace upp_bit with bit_span to be coherent with set_reg... */
+static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
+		uint8_t low_bit, uint8_t upp_bit, uint32_t *value)
+{
+	uint8_t bit_span;
+	uint32_t bit_mask;
+
+	if (value == NULL)
+		return -EINVAL;
+	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
+			upp_bit))
+		return -EINVAL;
+
+	bit_span = upp_bit - low_bit + 1;
+	bit_mask = (1 << bit_span) - 1;
+
+	/* shift mask to it's right bit offset */
+	bit_mask <<= low_bit;
+
+	/* read, compute and update */
+	*value = *(volatile uint32_t*)reg_addr;
+	/* shut off the bits in range */
+	*value &= bit_mask;
+	*value >>= low_bit;
+
+	return 0;
+}
+
+/* low_bit and upp_bit are inclusives */
+static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
+		uint8_t low_bit, uint8_t bit_span, uint32_t value)
+{
+	uint32_t reg_value;
+	uint32_t bit_mask;
+
+	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
+			bit_span))
+		return -EINVAL;
+
+	bit_mask = (1 << bit_span) - 1;
+	/* check value doesn't have more bits than fit in the bit span */
+	if ((value & bit_mask) != value) {
+		fprintf(stderr, "value 0x%"PRIu32" doesn't fit in [%d:%d]\n",
+				value, low_bit, low_bit + bit_span - 1);
+		return -EINVAL;
+	}
+
+	/* shift value and mask to their right bit offset */
+	bit_mask <<= low_bit;
+	value <<= low_bit;
+
+	/* read, compute and update */
+	reg_value = *(volatile uint32_t*)reg_addr;
+	/* shut off the bits in range */
+	reg_value &= ~bit_mask;
+	reg_value |= value;
+	*(volatile uint32_t*)reg_addr = reg_value;
+
+	return 0;
+}
+
 static bool is_simulated_pwm_pin(const struct pin *pin);
 
 static void simulated_pwm_analogWrite(struct pin *pin, int value)
@@ -201,7 +279,22 @@ static bool is_simulated_pwm_pin(const struct pin *pin)
 
 static void real_pwm_analogWrite(struct pin *pin, int value)
 {
-	fprintf(stderr, "%s(%"PRIu8", %d)\n", __func__, pin->idx, value);
+	void *reg_addr;
+	struct real_pwm *pwm = &pin->pwm.real;
+	uint32_t busy;
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	do {
+		get_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->rdy, 1,
+				&busy);
+		if (busy)
+			fprintf(stderr, "busy\n");
+	} while (busy);
+
+	reg_addr = (char *)map[MAPPING_PWM].start + pwm->period_register;
+	/* set number of the active cycles to 0 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ACTIVE_CYS, 0x10, value);
 }
 
 static bool is_real_pwm_pin(const struct pin *pin)
@@ -456,82 +549,6 @@ static enum mapping_name name_from_pin(uint8_t pin)
 	return MAPPING_LRADC;
 }
 
-static bool register_bit_range_value_base_prm_valid(void *reg_addr,
-		enum mapping_name name,
-		uint8_t low_bit, uint8_t bit_span)
-{
-	/* check reg_addr is in range */
-	if (reg_addr < map[name].start ||
-			reg_addr >= map[name].start + map[name].upper_addr)
-		return false;
-	/* check bounds are strictly ordered and less than 32 */
-	if (bit_span == 0 || low_bit + bit_span >= 32)
-		return false;
-
-	return true;
-}
-
-/* TODO replace upp_bit with bit_span to be coherent with set_reg... */
-static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
-		uint8_t low_bit, uint8_t upp_bit, uint32_t *value)
-{
-	uint8_t bit_span;
-	uint32_t bit_mask;
-
-	if (value == NULL)
-		return -EINVAL;
-	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
-			upp_bit))
-		return -EINVAL;
-
-	bit_span = upp_bit - low_bit + 1;
-	bit_mask = (1 << bit_span) - 1;
-
-	/* shift mask to it's right bit offset */
-	bit_mask <<= low_bit;
-
-	/* read, compute and update */
-	*value = *(volatile uint32_t*)reg_addr;
-	/* shut off the bits in range */
-	*value &= bit_mask;
-	*value >>= low_bit;
-
-	return 0;
-}
-
-/* low_bit and upp_bit are inclusives */
-static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
-		uint8_t low_bit, uint8_t bit_span, uint32_t value)
-{
-	uint32_t reg_value;
-	uint32_t bit_mask;
-
-	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
-			bit_span))
-		return -EINVAL;
-
-	bit_mask = (1 << bit_span) - 1;
-	/* check value doesn't have more bits than fit in the bit span */
-	if ((value & bit_mask) != value) {
-		fprintf(stderr, "value 0x%"PRIu32" doesn't fit in [%d:%d]\n",
-				value, low_bit, low_bit + bit_span - 1);
-		return -EINVAL;
-	}
-
-	/* shift value and mask to their right bit offset */
-	bit_mask <<= low_bit;
-	value <<= low_bit;
-
-	/* read, compute and update */
-	reg_value = *(volatile uint32_t*)reg_addr;
-	/* shut off the bits in range */
-	reg_value &= ~bit_mask;
-	reg_value |= value;
-	*(volatile uint32_t*)reg_addr = reg_value;
-
-	return 0;
-}
-
 static int pin_pinMode(const struct pin *pin, uint32_t mode)
 {
 	void *reg_addr;
@@ -541,6 +558,8 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 
 	if (pin == NULL || (mode != A20_GPIO_IN && mode != A20_GPIO_OUT))
 		return -EINVAL;
+	if (mode == A20_GPIO_OUT && is_real_pwm_pin(pin))
+		mode = A20_GPIO_PWM;
 	name = name_from_pin(pin->idx);
 
 	reg_addr = ((char *)map[name].start + pin->cfg_reg_off);
@@ -669,7 +688,40 @@ static void init_simulated_pwm(struct pin *pin)
 
 static void init_real_pwm(struct pin *pin)
 {
-	fprintf(stderr, "%s\n", __func__);
+	void *reg_addr;
+	struct real_pwm *pwm = &pin->pwm.real;
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	/* don't bypass the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->bypass, 1, 0);
+	/* don't send a pulse */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			pwm->pulse_out_start, 1, 0);
+	/* put in cycle mode (not pulse mode) */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->mode, 1, 0);
+	/* set clock divider to / 1 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->prescal, 4,
+			0xF);
+	/* disable the clock gating */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->clk_gating, 1,
+			1);
+	/* set the active state to high */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->act_state, 1,
+			1);
+	/* enable the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->en, 1, 1);
+
+	/*
+	 * define the duty cycle, divide in 256 slices, so that the number of
+	 * active cycles is the value passed to analogWrite
+	 */
+	reg_addr = (char *)map[MAPPING_PWM].start + pwm->period_register;
+	/* set number of the entire cycles to 255 (0xFE + 1) */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ENTIRE_CYS, 0x10, 0xFE);
+	/* set number of the active cycles to 0 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ACTIVE_CYS, 0x10, 0);
 }
 
 static void init_simulated_pwms()
