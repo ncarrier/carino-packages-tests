@@ -542,19 +542,13 @@ static void __attribute__ ((destructor)) libarduino_clean(void)
 		munmap(map[n].base, map[n].size);
 }
 
-static void init_mapping(enum mapping_name n)
+static void init_mapping(enum mapping_name n, int fd)
 {
-	int fd;
 	long page_size_mask;
 	long min_size;
 	long page_size;
 	/* absolute address to which corresponds the /dev/mem mapping start */
 	long mapping_absolute_start;
-
-	/* TODO open / close dev/mem only once */
-	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (fd == -1)
-		error(EXIT_FAILURE, errno, "open");
 
 	page_size = sysconf(_SC_PAGESIZE);
 	/* assumes page_size is a power of two */
@@ -577,8 +571,6 @@ static void init_mapping(enum mapping_name n)
 		error(EXIT_FAILURE, errno, "mmap");
 	map[n].start = (void *)((int)map[n].base +
 			(map[n].base_offset & page_size_mask));
-
-	close(fd);
 }
 
 /*
@@ -628,14 +620,25 @@ static void init_simulated_pwms()
 			init_simulated_pwm(pin);
 }
 
-static void __attribute__ ((constructor)) libarduino_init(void)
+static void init_mappings()
 {
+	int fd;
 	enum mapping_name n;
+
+	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (fd == -1)
+		error(EXIT_FAILURE, errno, "open");
 
 	/* mmap dev/mem for the register ranges we wan't to gain access to */
 	for (n = MAPPING_FIRST; n <= MAPPING_LAST; n++)
-		init_mapping(n);
+		init_mapping(n, fd);
 
+	close(fd);
+}
+
+static void __attribute__ ((constructor)) libarduino_init(void)
+{
+	init_mappings();
 	init_simulated_pwms();
 }
 
