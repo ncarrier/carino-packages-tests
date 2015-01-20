@@ -17,6 +17,10 @@
 
 #include <pthread.h>
 
+#define container_of(ptr, type, member) ({ \
+	const typeof( ((type *)NULL)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );})
+
 /* documentation used is A20 user manual V1.2 20131210.pdf */
 #define A20_REG_SIZE sizeof(uint32_t)
 
@@ -116,9 +120,23 @@ static struct mapping map[] = {
 };
 
 struct simulated_pwm {
-	uint8_t idx;
 	pthread_t thread;
 	sig_atomic_t value; /* between 0 and 255 */
+};
+
+struct real_pwm {
+	// TODO
+};
+
+struct pin;
+
+struct pwm {
+	/* operations on pin */
+	void (* analogWrite)(struct pin *pin, int value);
+	union {
+		struct simulated_pwm simulated;
+		struct real_pwm real;
+	};
 };
 
 struct pin {
@@ -137,35 +155,29 @@ struct pin {
 	/** bit to alter in the dat_reg for setting / reading the value */
 	uint8_t dat_bit; /* must be equal to x in PIx, PHx ... */
 
-	struct simulated_pwm *sim_pwm;
-
-	/* operations on pin */
-	void (* analogWrite)(const struct pin *pin, int value);
+	struct pwm pwm;
 };
 
-static struct simulated_pwm simulated_pwms[] = {
-		{3, 0},
-		{9, 0},
-		{10, 0},
-		{11, 0},
+static bool is_simulated_pwm_pin(const struct pin *pin);
 
-		/* end of array */
-		{255, 0},
-};
-
-static void simulated_pwm_analogWrite(const struct pin *pin, int value)
+static void simulated_pwm_analogWrite(struct pin *pin, int value)
 {
-	if (pin->sim_pwm != NULL)
-		pin->sim_pwm->value = value;
+	if (is_simulated_pwm_pin(pin))
+		pin->pwm.simulated.value = value;
+}
+
+static bool is_simulated_pwm_pin(const struct pin *pin)
+{
+	return pin->pwm.analogWrite == simulated_pwm_analogWrite;
 }
 
 /* 5, 6 */
-static void real_pwm_analogWrite(const struct pin *pin, int value)
+static void real_pwm_analogWrite(struct pin *pin, int value)
 {
 	fprintf(stderr, "%s(%"PRIu8", %d)\n", __func__, pin->idx, value);
 }
 
-const struct pin pins[] = {
+struct pin pins[] = {
 	[0] = { /* port PI19 */
 		.idx = 0,
 
@@ -202,9 +214,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
 		.dat_bit = 6,
 
-		.sim_pwm = simulated_pwms + 0,
-
-		.analogWrite = simulated_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = simulated_pwm_analogWrite,
+		},
 	},
 	[4] = { /* port PH8 */
 		.idx = 4,
@@ -224,7 +236,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PB_DAT_OFF,
 		.dat_bit = 2,
 
-		.analogWrite = real_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = real_pwm_analogWrite,
+		},
 	},
 	[6] = { /* port PI3 */
 		.idx = 6,
@@ -235,7 +249,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 3,
 
-		.analogWrite = real_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = real_pwm_analogWrite,
+		},
 	},
 	[7] = { /* port PH9 */
 		.idx = 7,
@@ -265,9 +281,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PH_DAT_OFF,
 		.dat_bit = 5,
 
-		.sim_pwm = simulated_pwms + 1,
-
-		.analogWrite = simulated_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = simulated_pwm_analogWrite,
+		},
 	},
 	[10] = { /* port PI10 */
 		.idx = 10,
@@ -278,9 +294,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 10,
 
-		.sim_pwm = simulated_pwms + 2,
-
-		.analogWrite = simulated_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = simulated_pwm_analogWrite,
+		},
 	},
 	[11] = { /* port PI12 */
 		.idx = 11,
@@ -291,9 +307,9 @@ const struct pin pins[] = {
 		.dat_reg_off = A20_REG_PI_DAT_OFF,
 		.dat_bit = 12,
 
-		.sim_pwm = simulated_pwms + 3,
-
-		.analogWrite = simulated_pwm_analogWrite,
+		.pwm = {
+				.analogWrite = simulated_pwm_analogWrite,
+		},
 	},
 	[12] = { /* port PI13 */
 		.idx = 12,
@@ -577,12 +593,11 @@ static void init_mapping(enum mapping_name n)
 
 static void *simulated_pwm_update_routine(void *data)
 {
-	struct simulated_pwm *pwm = data;
-	const struct pin *pin = pins + pwm->idx;
+	struct pin *pin = data;
 	int value, complement;
 
 	while (true) {
-		value = pwm->value;
+		value = pin->pwm.simulated.value;
 		complement = 255 - value;
 		if (value != 0) {
 			pin_digitalWrite(pin, HIGH);
@@ -597,18 +612,20 @@ static void *simulated_pwm_update_routine(void *data)
 	return NULL;
 }
 
-static void init_simulated_pwm(struct simulated_pwm *simulated_pwm)
+static void init_simulated_pwm(struct pin *pin)
 {
-	pthread_create(&simulated_pwm->thread, NULL,
-			simulated_pwm_update_routine, simulated_pwm);
+	pthread_create(&pin->pwm.simulated.thread, NULL,
+			simulated_pwm_update_routine, pin);
 }
 
 static void init_simulated_pwms()
 {
 	int i;
+	struct pin *pin = pins;
 
-	for (i = 0; simulated_pwms[i].idx != 255; i++)
-		init_simulated_pwm(simulated_pwms + i);
+	for (i = 0; i <= A5; i++, pin++)
+		if (is_simulated_pwm_pin(pin))
+			init_simulated_pwm(pin);
 }
 
 static void __attribute__ ((constructor)) libarduino_init(void)
@@ -635,7 +652,7 @@ void pinMode(uint8_t pin, uint8_t mode)
 
 void analogWrite(uint8_t pin, int value)
 {
-	const struct pin *ppin;
+	struct pin *ppin;
 
 	if (pin > A5)
 		return;
@@ -643,32 +660,21 @@ void analogWrite(uint8_t pin, int value)
 
 	ppin = pins + pin;
 
-	if (ppin->analogWrite)
-		ppin->analogWrite(ppin, value);
-}
-
-static bool is_simulated_pwm_pin(uint8_t pin)
-{
-	int i;
-
-	for (i = 0; simulated_pwms[i].idx != 255; i++)
-		if (pin == simulated_pwms[i].idx)
-			return true;
-
-	return false;
+	if (ppin->pwm.analogWrite)
+		ppin->pwm.analogWrite(ppin, value);
 }
 
 void digitalWrite(uint8_t pin, uint8_t value)
 {
-	const struct pin *ppin;
+	struct pin *ppin;
 
 	if (pin > A5)
 		return;
 
 	ppin = pins + pin;
 
-	if (is_simulated_pwm_pin(pin))
-		ppin->analogWrite(ppin, value ? 255 : 0);
+	if (is_simulated_pwm_pin(ppin))
+		ppin->pwm.analogWrite(ppin, value ? 255 : 0);
 	else
 		pin_digitalWrite(ppin, !!value);
 }
