@@ -65,6 +65,16 @@
 #define A20_REG_LRADC_DATA_1_OFF 0x10
 
 
+#define A20_PWM_BASE_ADDR 0x01C20C00
+#define A20_PWM_LAST_REG_OFF A20_REG_PWM_CH1_PERIOD_OFF
+#define A20_PWM_UPPER_ADDR (A20_PWM_BASE_ADDR + A20_PWM_LAST_REG_OFF + \
+		A20_REG_SIZE)
+
+#define A20_REG_PWM_CTRL_OFF 0x200
+#define A20_REG_PWM_CH0_PERIOD_OFF 0x204
+#define A20_REG_PWM_CH1_PERIOD_OFF 0x208
+
+
 // by chance, the values correspond between config reg and arduino lib
 #define A20_GPIO_IN INPUT
 #define A20_GPIO_OUT OUTPUT
@@ -79,6 +89,7 @@
 enum mapping_name {
 	MAPPING_PIO,
 	MAPPING_TP,
+	MAPPING_PWM,
 	MAPPING_LRADC,
 
 	MAPPING_FIRST = MAPPING_PIO,
@@ -110,6 +121,11 @@ static struct mapping map[] = {
 	[MAPPING_TP] = {
 		.base_offset = A20_TP_BASE_ADDR,
 		.upper_addr = A20_TP_UPPER_ADDR,
+		0,
+	},
+	[MAPPING_PWM] = {
+		.base_offset = A20_PWM_BASE_ADDR,
+		.upper_addr = A20_PWM_UPPER_ADDR,
 		0,
 	},
 	[MAPPING_LRADC] = {
