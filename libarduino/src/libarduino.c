@@ -74,6 +74,8 @@
 #define A20_REG_PWM_CH0_PERIOD_OFF 0x204
 #define A20_REG_PWM_CH1_PERIOD_OFF 0x208
 
+#define A20_LOW_BIT_PWM_ENTIRE_CYS 16
+#define A20_LOW_BIT_PWM_ACTIVE_CYS 0
 
 // by chance, the values correspond between config reg and arduino lib
 #define A20_GPIO_IN INPUT
@@ -141,7 +143,17 @@ struct simulated_pwm {
 };
 
 struct real_pwm {
-	// TODO
+	/* bits for control register */
+	uint8_t rdy;
+	uint8_t bypass;
+	uint8_t pulse_out_start;
+	uint8_t mode;
+	uint8_t clk_gating;
+	uint8_t act_state;
+	uint8_t en;
+	uint8_t prescal; /* bits [prescal, prescal + 3] */
+
+	uint32_t period_register;
 };
 
 struct pin;
@@ -258,6 +270,19 @@ struct pin pins[] = {
 
 		.pwm = {
 				.analogWrite = real_pwm_analogWrite,
+				.real = {
+						.rdy = 28,
+						.bypass = 9,
+						.pulse_out_start = 8,
+						.mode = 7,
+						.clk_gating = 6,
+						.act_state = 5,
+						.en = 4,
+						.prescal = 0,
+
+						.period_register =
+						A20_REG_PWM_CH0_PERIOD_OFF,
+				},
 		},
 	},
 	[6] = { /* port PI3 */
@@ -271,6 +296,19 @@ struct pin pins[] = {
 
 		.pwm = {
 				.analogWrite = real_pwm_analogWrite,
+				.real = {
+						.rdy = 29,
+						.bypass = 24,
+						.pulse_out_start = 23,
+						.mode = 22,
+						.clk_gating = 21,
+						.act_state = 20,
+						.en = 19,
+						.prescal = 15,
+
+						.period_register =
+						A20_REG_PWM_CH1_PERIOD_OFF,
+				},
 		},
 	},
 	[7] = { /* port PH9 */
