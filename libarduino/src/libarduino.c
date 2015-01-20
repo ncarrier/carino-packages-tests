@@ -458,19 +458,20 @@ static enum mapping_name name_from_pin(uint8_t pin)
 
 static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 		enum mapping_name name,
-		uint8_t low_bit, uint8_t upp_bit)
+		uint8_t low_bit, uint8_t bit_span)
 {
 	/* check reg_addr is in range */
 	if (reg_addr < map[name].start ||
-			reg_addr > map[name].start + A20_PIO_LAST_REG_OFF)
+			reg_addr >= map[name].start + map[name].upper_addr)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
-	if (upp_bit < low_bit || upp_bit >= 32 || low_bit >= 32)
+	if (bit_span == 0 || low_bit + bit_span >= 32)
 		return false;
 
 	return true;
 }
 
+/* TODO replace upp_bit with bit_span to be coherent with set_reg... */
 static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
 		uint8_t low_bit, uint8_t upp_bit, uint32_t *value)
 {
@@ -500,22 +501,20 @@ static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
 
 /* low_bit and upp_bit are inclusives */
 static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
-		uint8_t low_bit, uint8_t upp_bit, uint32_t value)
+		uint8_t low_bit, uint8_t bit_span, uint32_t value)
 {
 	uint32_t reg_value;
-	uint8_t bit_span;
 	uint32_t bit_mask;
 
 	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
-			upp_bit))
+			bit_span))
 		return -EINVAL;
 
-	bit_span = upp_bit - low_bit + 1;
 	bit_mask = (1 << bit_span) - 1;
 	/* check value doesn't have more bits than fit in the bit span */
 	if ((value & bit_mask) != value) {
 		fprintf(stderr, "value 0x%"PRIu32" doesn't fit in [%d:%d]\n",
-				value, low_bit, upp_bit);
+				value, low_bit, low_bit + bit_span - 1);
 		return -EINVAL;
 	}
 
@@ -547,7 +546,7 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 	reg_addr = ((char *)map[name].start + pin->cfg_reg_off);
 
 	ret = get_register_bit_range_value(reg_addr, name, pin->low_bit,
-			pin->low_bit + 2, &value);
+			3, &value);
 	if (ret < 0) {
 		fprintf(stderr, "failed to read value of register 0x%x\n",
 				pin->cfg_reg_off);
@@ -557,8 +556,8 @@ static int pin_pinMode(const struct pin *pin, uint32_t mode)
 	if (value == mode)
 		return 0;
 
-	return set_register_bit_range_value(reg_addr, name, pin->low_bit,
-			pin->low_bit + 2, mode);
+	return set_register_bit_range_value(reg_addr, name, pin->low_bit, 3,
+			mode);
 }
 
 static int pin_digitalWrite(const struct pin *pin, uint8_t value)
@@ -573,8 +572,8 @@ static int pin_digitalWrite(const struct pin *pin, uint8_t value)
 
 	reg_addr = ((char *)map[name].start + pin->dat_reg_off);
 
-	return set_register_bit_range_value(reg_addr, name, pin->dat_bit,
-			pin->dat_bit, value);
+	return set_register_bit_range_value(reg_addr, name, pin->dat_bit, 1,
+			value);
 }
 
 static int pin_digitalRead(const struct pin *pin, uint32_t *value)
