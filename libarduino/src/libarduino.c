@@ -203,20 +203,17 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 	return true;
 }
 
-/* TODO replace upp_bit with bit_span to be coherent with set_reg... */
 static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
-		uint8_t low_bit, uint8_t upp_bit, uint32_t *value)
+		uint8_t low_bit, uint8_t bit_span, uint32_t *value)
 {
-	uint8_t bit_span;
 	uint32_t bit_mask;
 
 	if (value == NULL)
 		return -EINVAL;
 	if (!register_bit_range_value_base_prm_valid(reg_addr, name, low_bit,
-			upp_bit))
+			bit_span))
 		return -EINVAL;
 
-	bit_span = upp_bit - low_bit + 1;
 	bit_mask = (1 << bit_span) - 1;
 
 	/* shift mask to it's right bit offset */
@@ -611,8 +608,8 @@ static int pin_digitalRead(const struct pin *pin, uint32_t *value)
 
 	reg_addr = ((char *)map[name].start + pin->dat_reg_off);
 
-	return get_register_bit_range_value(reg_addr, name, pin->dat_bit,
-			pin->dat_bit, value);
+	return get_register_bit_range_value(reg_addr, name, pin->dat_bit, 1,
+			value);
 }
 
 static void __attribute__ ((destructor)) libarduino_clean(void)
