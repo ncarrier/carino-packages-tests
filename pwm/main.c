@@ -10,7 +10,8 @@
 
 static void usage(int status)
 {
-	printf("tests_pwm GPIO\n\twith GPIO being in [0,13]U[A0,A5]\n");
+	printf("tests_pwm PIN\n\twith PIN being in [0,13]U[A0,A5]\n"
+			"\tMakes the selected 'fade in/out' at 0.5Hz\n");
 
 	exit(status);
 }

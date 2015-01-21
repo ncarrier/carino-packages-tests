@@ -5,7 +5,8 @@
 
 static void usage(int status)
 {
-	printf("tests_gpio GPIO\n\twith GPIO being in [0,13]U[A0,A5]\n");
+	printf("tests_gpio PIN\n\twith PIN being in [0,13]U[A0,A5]\n"
+			"\tMakes the selected 'blink' at 0.5Hz\n");
 
 	exit(status);
 }

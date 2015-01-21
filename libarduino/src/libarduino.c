@@ -228,7 +228,7 @@ static int get_register_bit_range_value(void *reg_addr, enum mapping_name name,
 	return 0;
 }
 
-/* low_bit and upp_bit are inclusives */
+/* low_bit is inclusive, bit_span is the total number of bits in [[1, 32]] */
 static int set_register_bit_range_value(void *reg_addr, enum mapping_name name,
 		uint8_t low_bit, uint8_t bit_span, uint32_t value)
 {
