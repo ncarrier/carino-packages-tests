@@ -139,4 +139,7 @@ long map(long, long, long, long, long);
 
 //#include "pins_arduino.h"
 
+void init_servo(uint8_t p);
+void setServoValue(uint8_t pin, int value);
+
 #endif

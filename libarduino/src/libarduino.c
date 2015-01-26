@@ -726,6 +726,44 @@ static void init_real_pwm(struct pin *pin)
 			A20_LOW_BIT_PWM_ACTIVE_CYS, 0x10, 0);
 }
 
+void init_servo(uint8_t p)
+{
+	void *reg_addr;
+	struct pin *pin = pins + p;
+	struct real_pwm *pwm = &pin->pwm.real;
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	/* don't bypass the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->bypass, 1, 0);
+	/* don't send a pulse */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			pwm->pulse_out_start, 1, 0);
+	/* put in cycle mode (not pulse mode) */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->mode, 1, 0);
+	/* set clock divider to / 120 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->prescal, 4,
+			0x0);
+	/* disable the clock gating */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->clk_gating, 1,
+			1);
+	/* set the active state to high */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->act_state, 1,
+			1);
+	/* enable the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->en, 1, 1);
+
+	/*
+	 * at 24MHz / 120, 4000 is 20ms, 1 ms is 200 and 2ms is 400
+	 */
+	reg_addr = (char *)map[MAPPING_PWM].start + pwm->period_register;
+	/* set number of the entire cycles to 4000 (3999 + 1) */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ENTIRE_CYS, 0x10, 3999);
+	/* set number of the active cycles to 0 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ACTIVE_CYS, 0x10, 0);
+}
+
 static void init_simulated_pwms()
 {
 	int i;
@@ -833,4 +871,33 @@ int digitalRead(uint8_t pin)
 		return 0;
 
 	return value;
+}
+
+void setServoValue(uint8_t p, int value)
+{
+	void *reg_addr;
+	struct pin *pin = pins + p;
+	struct real_pwm *pwm = &pin->pwm.real;
+	uint32_t busy;
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	/* disable the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->en, 1, 0);
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	do {
+		get_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->rdy, 1,
+				&busy);
+		if (busy)
+			fprintf(stderr, "busy\n");
+	} while (busy);
+
+	reg_addr = (char *)map[MAPPING_PWM].start + pwm->period_register;
+	/* set number of the active cycles to 0 */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM,
+			A20_LOW_BIT_PWM_ACTIVE_CYS, 0x10, 120 + 22 * value / 10);
+
+	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
+	/* enable the pwm */
+	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->en, 1, 1);
 }
