@@ -873,6 +873,13 @@ int digitalRead(uint8_t pin)
 	return value;
 }
 
+int analogRead(__attribute__((unused)) uint8_t pin)
+{
+	// TODO
+
+	return 0;
+}
+
 void setServoValue(uint8_t p, int value)
 {
 	void *reg_addr;
@@ -900,4 +907,13 @@ void setServoValue(uint8_t p, int value)
 	reg_addr = (char *)map[MAPPING_PWM].start + A20_REG_PWM_CTRL_OFF;
 	/* enable the pwm */
 	set_register_bit_range_value(reg_addr, MAPPING_PWM, pwm->en, 1, 1);
+}
+
+void tone(__attribute__((unused)) uint8_t pin,
+		__attribute__((unused)) unsigned int frequency,
+		__attribute__((unused)) unsigned long duration)
+{
+	// TODO
+	printf("STUB %s: pin %"PRIu32", frequency %d, duration %lu\n", __func__,
+			pin, frequency, duration);
 }
