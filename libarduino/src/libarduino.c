@@ -193,8 +193,9 @@ static bool register_bit_range_value_base_prm_valid(void *reg_addr,
 		uint8_t low_bit, uint8_t bit_span)
 {
 	/* check reg_addr is in range */
-	if (reg_addr < map[name].start ||
-			reg_addr >= map[name].start + map[name].upper_addr)
+	if (reg_addr < map[name].start
+			|| (char *) reg_addr >= (char *)map[name].start
+					+ map[name].upper_addr)
 		return false;
 	/* check bounds are strictly ordered and less than 32 */
 	if (bit_span == 0 || low_bit + bit_span > 32)
