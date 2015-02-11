@@ -654,11 +654,11 @@ static void init_mapping(enum mapping_name n, int fd)
 /*
  * frequency for pwm should be ~ 490 Hz (near to that of a real arduino)
  * in microseconds : 1000000 / 490 = 2041
- * each period is divided in 256 slices of ~8µs
+ * each period is divided in 256 slices of ~8us
  * which gives a frequency of 1000000 / (256 * 8) =~ 488Hz
  */
 
-/* in µs */
+/* in us */
 #define PWM_SLICE 8
 
 static void *simulated_pwm_update_routine(void *data)
