@@ -116,24 +116,26 @@ void loop(void);
 extern int argc;
 extern char **argv;
 
+void tone(uint8_t _pin, unsigned int frequency, unsigned long duration);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
 #ifdef __cplusplus
-#include "WCharacter.h"
-#include "WString.h"
+//#include "WCharacter.h"
+//#include "WString.h"
 #include "Serial.h"
 
 //unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout = 1000000L);
-void tone(uint8_t _pin, unsigned int frequency, unsigned long duration = 0);
+//void tone(uint8_t _pin, unsigned int frequency, unsigned long duration = 0);
 void noTone(uint8_t _pin);
 
 // WMath prototypes
 long random(long);
 long random(long, long);
 void randomSeed(unsigned int);
-long map(long, long, long, long, long);
+//long map(long, long, long, long, long);
 
 #endif
 
