@@ -3,54 +3,54 @@
 
 #include <Arduino.h>
 
+#define DEFAULT_PIN 13
+
 static void usage(int status)
 {
-	printf("tests_gpio PIN\n\twith PIN being in [0,13]U[A0,A5]\n"
-			"\tMakes the selected 'blink' at 0.5Hz\n");
+	printf("tests_gpio high|low [PIN]\n\twith PIN being in [0,13]U[A0,A5]\n"
+			"\tSets the selected pin to the high or low pin\n"
+			"\tIf not given, PIN defaults to %d\n", DEFAULT_PIN);
 
 	exit(status);
 }
 
 int main(int argc, char *argv[])
 {
-	int pin = 13;
+	int pin = DEFAULT_PIN;
+	uint8_t value;
+	const char *strvalue;
+	char *strpin;
 
-	if (argc > 1) {
-		if (argv[1][0] == 'A') {
-			if (argv[1][1] == '\0')
+	if (argc < 2 || argc > 3)
+		usage(EXIT_FAILURE);
+	strvalue = argv[1];
+
+	if (strcasecmp("high", strvalue) == 0)
+		value = HIGH;
+	else if (strcasecmp("low", strvalue) == 0)
+		value = LOW;
+	else
+		usage(EXIT_FAILURE);
+
+	if (argc == 3) {
+		strpin = argv[2];
+		if (strpin[0] == 'A') {
+			if (strpin[1] == '\0')
 				usage(EXIT_FAILURE);
 
-			argv[1][2] = '\0';
-			pin = atoi(argv[1] + 1) + 14;
+			strpin[1] = '\0';
+			pin = atoi(strpin + 1) + 14;
 		} else {
-			pin = atoi(argv[1]);
+			pin = atoi(strpin);
 		}
 	}
 
-	printf("working with pin %d\n", pin);
+	if (getenv("DEBUG") != NULL)
+		printf("set pin %d to state %d\n", pin, value);
 
+	return EXIT_SUCCESS;
 	pinMode(pin, OUTPUT);
-
-	/* let it blink, let it blink, let it blink, oh let it blink ! */
-	printf("value: %d\n", digitalRead(pin));
-	digitalWrite(pin, HIGH);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
-	digitalWrite(pin, LOW);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
-	digitalWrite(pin, HIGH);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
-	digitalWrite(pin, LOW);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
-	digitalWrite(pin, HIGH);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
-	digitalWrite(pin, LOW);
-	printf("value: %d\n", digitalRead(pin));
-	sleep(1);
+	digitalWrite(pin, value);
 
 	return EXIT_SUCCESS;
 }
