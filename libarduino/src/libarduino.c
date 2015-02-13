@@ -477,24 +477,27 @@ struct pin pins[] = {
 		.dat_bit = 11,
 	},
 
-	/* I absolutely don't understand how these two can function as GPIOs */
+	/*
+	 * I absolutely don't understand how these two can function as GPIOs,
+	 * so for now, the values set are placeholders TODO
+	 */
 	[A0] = { /* port LRADC0 */
-/*		.idx = A0,*/
+		.idx = -1,
 
-/*		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,*/
-/*		.low_bit = 12,*/
+		.cfg_reg_off = -1,
+		.low_bit = -1,
 
-/*		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,*/
-/*		.dat_bit = 3,*/
+		.dat_reg_off = -1,
+		.dat_bit = -1,
 	},
 	[A1] = { /* port LRADC1 */
-/*		.idx = A1,*/
+		.idx = -1,
 
-/*		.cfg_reg_off = A20_REG_TP_IO_CONFIG_OFF,*/
-/*		.low_bit = 12,*/
+		.cfg_reg_off = -1,
+		.low_bit = -1,
 
-/*		.dat_reg_off = A20_REG_TP_PORT_DATA_OFF,*/
-/*		.dat_bit = 3,*/
+		.dat_reg_off = -1,
+		.dat_bit = -1,
 	},
 
 	[A2] = { /* port TP_XP / XP_TP */
