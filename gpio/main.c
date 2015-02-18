@@ -48,7 +48,6 @@ int main(int argc, char *argv[])
 	if (getenv("DEBUG") != NULL)
 		printf("set pin %d to state %d\n", pin, value);
 
-	return EXIT_SUCCESS;
 	pinMode(pin, OUTPUT);
 	digitalWrite(pin, value);
 
