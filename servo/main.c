@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include <Arduino.h>
+#include <Servo.h>
 
 static void usage(int status)
 {
@@ -14,7 +14,7 @@ static void usage(int status)
 			"{3, 5, 6}U[[9, 11]]\n"
 			"\twith 5 and 6, based on real pwms and the others "
 			"are simulated with gpios.\n"
-			"\tmake a servo controlled by pin PIN go ta a given "
+			"\tmake a servo controlled by pin PIN go to a given "
 			"angle in [0°, 180°]\n");
 
 	exit(status);
@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 {
 	int angle;
 	int pin = 3;
+	Servo s;
 
 	if (argc > 1) {
 		if (argv[1][0] == 'A') {
@@ -39,12 +40,13 @@ int main(int argc, char *argv[])
 			angle = atoi(argv[2]);
 	}
 
-	pinMode(pin, OUTPUT);
-	init_servo(pin);
+	servo(&s);
+	s.attach(&s, pin);
 
 	printf("set servo on pin %d to angle %d\n", pin, angle);
 
-	setServoValue(pin, angle);
+	s.write(&s, angle);
+
 	usleep(1000);
 
 	return EXIT_SUCCESS;
